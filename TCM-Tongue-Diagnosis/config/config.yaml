@@ -1,0 +1,66 @@
+# ====================================================
+# Cấu hình cho dự án TCM Tongue Diagnosis
+# ====================================================
+
+# ------------------------------------------------
+# Cấu hình mô hình Ollama
+# ------------------------------------------------
+ollama:
+  model: "llava:7b"
+  temperature: 0.0      # Bắt buộc để ổn định
+  top_p: 1.0            # Giảm ngẫu nhiên
+  seed: 42              # Cố định seed để lặp lại kết quả
+
+# ------------------------------------------------
+# Cấu hình kết nối Neo4j
+# ------------------------------------------------
+neo4j:
+  uri: "neo4j://localhost:7687"   # Địa chỉ Neo4j
+  user: "neo4j"                   # Tên đăng nhập
+  password: "12345678"            # Mật khẩu (thay bằng mật khẩu thật của bạn)
+
+# ------------------------------------------------
+# Cấu hình file mapping triệu chứng -> hội chứng
+# ------------------------------------------------
+mapping:
+  symptom_to_syndrome: "data/mapping/symptom_to_syndrome.json"
+  face_to_syndrome: "data/mapping/face_to_syndrome.json"
+
+# ------------------------------------------------
+# Cấu hình dataset
+# ------------------------------------------------
+dataset:
+  csv_path: "data/tcm_data_600_clean.csv"        # File CSV chứa dữ liệu Đông y
+  image_folder: "data/raw"                       # Thư mục chứa ảnh lưỡi gốc
+  processed_folder: "data/processed"             # Thư mục chứa ảnh đã xử lý
+
+# ------------------------------------------------
+# Cấu hình API
+# ------------------------------------------------
+api:
+  host: "0.0.0.0"           # Địa chỉ host cho API
+  port: 8000                # Cổng cho API
+  debug: true               # Bật chế độ debug
+
+# ------------------------------------------------
+# Cấu hình logging
+# ------------------------------------------------
+logging:
+  level: "INFO"             # Mức độ log (DEBUG, INFO, WARNING, ERROR)
+  file: "logs/tcm_diagnosis.log"   # File log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# ------------------------------------------------
+# Cấu hình output
+# ------------------------------------------------
+output:
+  results_folder: "output/results"   # Thư mục lưu kết quả chẩn đoán
+  save_json: true                     # Lưu kết quả ra file JSON
+
+# ------------------------------------------------
+# Cấu hình hệ thống QA
+# ------------------------------------------------
+qa:
+  llm_model: "qwen2.5:7b"  # Hoặc "qwen:7b" nếu bạn dùng bản thường
+  temperature: 0.0
+  seed: 42
