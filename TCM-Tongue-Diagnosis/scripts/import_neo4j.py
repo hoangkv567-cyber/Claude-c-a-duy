@@ -26,13 +26,13 @@ def create_graph(tx, row):
                 MERGE (h)-[:CÓ_BIỂU_HIỆN]->(t)
             """, hoichung=row['hội_chứng'], symptom=symptom)
     
-    # 4. Tạo ViThuoc và quan hệ BAO_GÔM
+    # 4. Tạo ViThuoc và quan hệ BAO_GỒM
     if pd.notna(row['vị_thuốc']):
         for herb in [h.strip() for h in row['vị_thuốc'].split(',')]:
             tx.run("""
                 MATCH (p:BaiThuoc {name: $bai_thuoc})
                 MERGE (v:ViThuoc {name: $herb})
-                MERGE (p)-[:BAO_GÔM]->(v)
+                MERGE (p)-[:BAO_GỒM]->(v)
             """, bai_thuoc=row['bài_thuốc'], herb=herb)
 
 def main():

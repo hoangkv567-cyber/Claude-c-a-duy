@@ -18,7 +18,7 @@ class Neo4jTCMClient:
             result = session.run(
                 """
                 MATCH (s:HoiChung {name: $name})-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
-                OPTIONAL MATCH (p)-[:BAO_GÔM]->(v:ViThuoc)
+                OPTIONAL MATCH (p)-[:BAO_GỒM]->(v:ViThuoc)
                 RETURN s.name AS hoi_chung, 
                        p.name AS bai_thuoc, 
                        COLLECT(DISTINCT v.name) AS vi_thuoc

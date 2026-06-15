@@ -32,7 +32,7 @@ class TCMQA:
 
         # Danh sách nhãn và quan hệ để LLM biết
         self.node_labels = ["BenhLy", "HoiChung", "TrieuChung", "BaiThuoc", "ViThuoc"]
-        self.rel_types = ["CHIA_THANH", "CO_BIEU_HIEN", "DUOC_DIEU_TRI_BANG", "BAO_GÔM"]
+        self.rel_types = ["CHIA_THÀNH", "CÓ_BIỂU_HIỆN", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG", "BAO_GỒM"]
 
     def close(self):
         self.driver.close()
@@ -79,7 +79,7 @@ class TCMQA:
         CRITICAL RULES:
         1. EXTRACT FULL PHRASES: Extract full meaningful phrases (e.g., 'ho liên tục', 'khó thở').
         2. ALWAYS use `WHERE toLower(n.name) CONTAINS toLower('keyword')` for fuzzy searching.
-        3. Keep Vietnamese accents strictly for relationships: CÓ_BIỂU_HIỆN, CHIA_THÀNH, ĐƯỢC_ĐIỀU_TRỊ_BẰNG, BAO_GÔM.
+        3. Keep Vietnamese accents strictly for relationships: CÓ_BIỂU_HIỆN, CHIA_THÀNH, ĐƯỢC_ĐIỀU_TRỊ_BẰNG, BAO_GỒM.
         4. Follow arrows strictly: (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung).
         5. DYNAMIC RETURN: 
            - ONLY diseases ("bệnh"): return `b.name`.

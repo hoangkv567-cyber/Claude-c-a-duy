@@ -174,12 +174,12 @@ class TCMFusionPipeline:
         
         YÊU CẦU CỰC KỲ QUAN TRỌNG VỀ LOGIC VÀ ĐỒ THỊ (YÊU CẦU BẮT BUỘC):
         1. **Không suy diễn lệch pha**: Đối với mỗi hội chứng trong chẩn đoán, bạn CHỈ ĐƯỢC PHÉP liên kết và giải thích nó dựa trên các triệu chứng được ghi ở mục "- Triệu chứng CỦA BỆNH NHÂN khớp với hội chứng này". TUYỆT ĐỐI KHÔNG ĐƯỢC gán các triệu chứng khác của bệnh nhân cho hội chứng đó nếu chúng không khớp (ví dụ: Không được ghi "Triệu chứng [Mặt trắng nhợt] dẫn đến hội chứng [Âm hư]", hoặc "Triệu chứng [Lưỡi có vết nứt] dẫn đến hội chứng [Tâm tỳ lưỡng hư]").
-        2. **Đường đi đồ thị chính xác**: Trích dẫn trực tiếp và chính xác đường đi trên đồ thị tri thức (Knowledge Graph paths). Tên quan hệ bài thuốc - vị thuốc bắt buộc phải là `BAO_GÔM` (không được ghi là BAO_GỒM hay BAO_GOM).
+        2. **Đường đi đồ thị chính xác**: Trích dẫn trực tiếp và chính xác đường đi trên đồ thị tri thức (Knowledge Graph paths). Tên quan hệ bài thuốc - vị thuốc bắt buộc phải là `BAO_GỒM` (không được ghi là BAO_GÔM hay BAO_GOM).
            Ví dụ minh họa cách viết đường đi:
            - "Triệu chứng [Tên triệu chứng] dẫn đến hội chứng [Tên hội chứng] thông qua quan hệ `(HoiChung)-[:CÓ_BIỂU_HIỆN]->(TrieuChung)`"
            - "Hội chứng [Tên hội chứng] thuộc nhóm bệnh [Tên bệnh lý] qua quan hệ `(BenhLy)-[:CHIA_THÀNH]->(HoiChung)`"
            - "Điều trị hội chứng này bằng bài thuốc [Tên bài thuốc] qua quan hệ `(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`"
-           - "Bài thuốc [Tên bài thuốc] gồm các vị thuốc như [Tên vị thuốc] qua quan hệ `(BaiThuoc)-[:BAO_GÔM]->(ViThuoc)`"
+           - "Bài thuốc [Tên bài thuốc] gồm các vị thuốc như [Tên vị thuốc] qua quan hệ `(BaiThuoc)-[:BAO_GỒM]->(ViThuoc)`"
         
         CẤU TRÚC CHI TIẾT CÂU TRẢ LỜI:
         1. **Kết luận chẩn đoán**: Đưa ra kết luận rõ ràng về hội chứng bệnh lý của bệnh nhân.
@@ -195,7 +195,7 @@ class TCMFusionPipeline:
             response = ollama.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là chuyên gia Đông y chẩn đoán chính xác tuyệt đối theo đồ thị tri thức, không suy diễn lệch pha, sử dụng quan hệ BAO_GÔM."},
+                    {"role": "system", "content": "Bạn là chuyên gia Đông y chẩn đoán chính xác tuyệt đối theo đồ thị tri thức, không suy diễn lệch pha, sử dụng quan hệ BAO_GỒM."},
                     {"role": "user", "content": prompt}
                 ],
                 options={
@@ -365,7 +365,7 @@ class TCMFusionPipeline:
                         bai_thuoc = treatment.get("bai_thuoc", "Chưa rõ")
                         vi_thuoc = ", ".join(treatment.get("vi_thuoc", [])) if treatment.get("vi_thuoc") else "Chưa rõ"
                         kg_context_lines.append(f"- Bài thuốc điều trị (Path: HoiChung -> ĐƯỢC_ĐIỀU_TRỊ_BẰNG -> BaiThuoc): {bai_thuoc}")
-                        kg_context_lines.append(f"- Các vị thuốc trong bài (Path: BaiThuoc -> BAO_GÔM -> ViThuoc): {vi_thuoc}")
+                        kg_context_lines.append(f"- Các vị thuốc trong bài (Path: BaiThuoc -> BAO_GỒM -> ViThuoc): {vi_thuoc}")
                     else:
                         kg_context_lines.append(f"- Bài thuốc điều trị: Chưa có bài thuốc phù hợp trong hệ thống.")
                 except Exception as e:
