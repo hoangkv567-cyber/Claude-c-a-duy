@@ -1,0 +1,15 @@
+# config/config.yaml
+
+neo4j:
+  uri: "neo4j://localhost:7687"
+  user: "neo4j"
+  password: "12345678"  # Thay bằng mật khẩu của bạn
+
+qa:
+  llm_model: "qwen2.5:7b"
+  temperature: 0.0
+  seed: 42
+  top_p: 0.9
+
+logging:
+  level: "INFO"

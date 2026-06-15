@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phòng Khám AI - HealthWatch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+    <div class="max-w-3xl mx-auto py-10 px-4">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-teal-600 px-6 py-4">
+                <h1 class="text-2xl font-bold text-white text-center">Hệ thống chẩn đoán bệnh Đông y</h1>
+                <p class="text-teal-100 text-center text-sm mt-1">Chẩn đoán Đông y qua Vọng chẩn & Vấn chẩn</p>
+            </div>
+
+            <form id="diagnoseForm" class="p-6 space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Mô tả triệu chứng của bạn</label>
+                    <textarea id="symptoms" rows="3" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Ví dụ: Tôi bị ho liên tục, khó thở và có nhiều đờm trắng..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📸 Tải lên ảnh Khuôn mặt</label>
+                        <input type="file" id="faceImg" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 w-full cursor-pointer"/>
+                    </div>
+                    
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">👅 Tải lên ảnh Lưỡi</label>
+                        <input type="file" id="tongueImg" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 w-full cursor-pointer"/>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    <span>Tiến hành chẩn đoán AI</span>
+                </button>
+            </form>
+
+            <div id="resultArea" class="hidden bg-gray-50 border-t border-gray-200 p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <span>📋 Kết Quả Phân Tích</span>
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-teal-700 mb-2">💬 Phân tích Triệu chứng (Neo4j):</h3>
+                        <p id="textResult" class="text-gray-600 text-sm leading-relaxed"></p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                        <h3 class="font-semibold text-teal-700 mb-2">👁️ Phân tích Hình ảnh (LLaVA):</h3>
+                        <p id="visionResult" class="text-gray-600 text-sm leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatMarkdown(text) {
+            if (!text) return "";
+            let html = text;
+            // Thay thế tiêu đề ###
+            html = html.replace(/^### (.*$)/gim, '<h4 class="font-bold text-gray-800 mt-4 mb-2 border-b pb-1">$1</h4>');
+            // Thay thế tiêu đề ##
+            html = html.replace(/^## (.*$)/gim, '<h3 class="font-bold text-teal-700 mt-5 mb-2">$1</h3>');
+            // Thay thế chữ in đậm **text**
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
+            // Thay thế mã code dạng `code`
+            html = html.replace(/`(.*?)`/g, '<code class="bg-gray-100 text-rose-600 px-1.5 py-0.5 rounded font-mono text-xs border border-gray-200">$1</code>');
+            // Thay thế danh sách dòng bắt đầu bằng - hoặc *
+            html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc text-gray-600 mt-1">$1</li>');
+            // Thay thế danh sách số 1. 2.
+            html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li class="ml-4 list-decimal text-gray-600 mt-1">$2</li>');
+            
+            // Tách các đoạn văn để bọc p nếu không phải là tiêu đề/danh sách
+            html = html.split('\n').map(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return "";
+                if (trimmed.startsWith('<li') || trimmed.startsWith('<h')) {
+                    return line;
+                }
+                return `<p class="mt-2 text-gray-700 leading-relaxed">${line}</p>`;
+            }).join('\n');
+            
+            return html;
+        }
+
+        document.getElementById('diagnoseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const resultArea = document.getElementById('resultArea');
+            const textResult = document.getElementById('textResult');
+            const visionResult = document.getElementById('visionResult');
+
+            // Lấy dữ liệu từ form
+            const symptoms = document.getElementById('symptoms').value;
+            const faceFile = document.getElementById('faceImg').files[0];
+            const tongueFile = document.getElementById('tongueImg').files[0];
+
+            if(!symptoms && !faceFile && !tongueFile) {
+                alert("Bạn phải nhập triệu chứng hoặc tải lên ít nhất 1 ảnh!");
+                return;
+            }
+
+            // Đóng gói dữ liệu dạng Multipart/Form-Data
+            const formData = new FormData();
+            formData.append('symptoms', symptoms);
+            if(faceFile) formData.append('face_img', faceFile);
+            if(tongueFile) formData.append('tongue_img', tongueFile);
+
+            // Cập nhật UI lúc đang load
+            submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> AI Đang xử lý...';
+            submitBtn.disabled = true;
+            resultArea.classList.add('hidden');
+
+            try {
+                // Gửi Request tới FastAPI
+                const response = await fetch('http://localhost:8000/api/diagnose', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const json = await response.json();
+
+                if(response.ok) {
+                    const data = json.data;
+                    
+                    // Hiển thị kết quả Vấn chẩn (Graph RAG)
+                    if(data.diagnosis_result && data.diagnosis_result.answer) {
+                        textResult.innerHTML = `
+                            <div class="mb-3 text-sm bg-teal-50 p-2 rounded text-teal-800">
+                                <strong>Chuỗi truy vấn AI đã gộp:</strong> ${data.input_fusion}
+                            </div>
+                            <div class="text-sm">
+                                ${formatMarkdown(data.diagnosis_result.answer)}
+                            </div>
+                        `;
+                    } else {
+                        textResult.innerHTML = "<span class='text-gray-400 italic'>Hệ thống chưa tìm thấy bệnh lý phù hợp với tổ hợp triệu chứng này.</span>";
+                    }
+
+                    // Hiển thị kết quả Vọng chẩn (LLaVA)
+                    if(data.vision_details && data.vision_details.analysis) {
+                        visionResult.innerHTML = `<strong>Triệu chứng AI nhìn thấy:</strong> <span class="text-blue-600">${data.vision_details.analysis}</span>`;
+                    } else {
+                        visionResult.innerHTML = "<span class='text-gray-400 italic'>Không tải lên ảnh hoặc AI chưa phát hiện được triệu chứng.</span>";
+                    }
+
+                    resultArea.classList.remove('hidden');
+                } else {
+                    alert("Lỗi API: " + json.detail);
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("Không thể kết nối đến máy chủ. Hãy chắc chắn API đang chạy ở cổng 8000.");
+            } finally {
+                // Khôi phục nút
+                submitBtn.innerHTML = 'Tiến hành chẩn đoán AI';
+                submitBtn.disabled = false;
+            }
+        });
+
+    </script>
+</body>
+</html>
