@@ -1,9 +1,9 @@
 # config/config.yaml
 
 neo4j:
-  uri: "neo4j://localhost:7687"
-  user: "neo4j"
-  password: "12345678"  # Thay bằng mật khẩu của bạn
+  uri: "neo4j+s://c55f875f.databases.neo4j.io"  # URI mới từ Aura
+  user: "c55f875f"                                # Username (thường là neo4j)
+  password: "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w"                # Mật khẩu bạn đã lưu
 
 qa:
   llm_model: "qwen2.5:7b"
