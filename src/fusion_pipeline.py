@@ -22,22 +22,31 @@ class TCMFusionPipeline:
         logger.info("Khởi tạo hoàn tất!")
 
     def _extract_syndromes_from_text(self, text: str) -> list:
+        """Trích xuất hội chứng bằng cách query trực tiếp Neo4j, đảm bảo không trượt dữ liệu"""
         if not text:
             return []
+        syndromes = []
         try:
-            result = self.qa_pipeline.execute_and_answer(f"{text}. Đó là hội chứng gì?")
-            if result and "syndromes" in result:
-                return result.get("syndromes", [])
-                
-            syndromes = []
-            if result and "data" in result:
-                for record in result["data"]:
-                    for k, v in record.items():
-                        if ("h.name" in k or "hoichung" in k.lower() or "syndrome" in k.lower()) and v:
-                            syndromes.append(v)
+            # 1. Bóc tách từ khóa (VD: "tôi bị đau đầu" -> "đau đầu")
+            terms = self.qa_pipeline._preprocess_question(text)
+            if not terms:
+                return []
+            
+            # 2. Quét trực tiếp Database bằng Cypher tĩnh (Không qua LLM)
+            for term in terms:
+                cypher = f"""
+                MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung) 
+                WHERE toLower(t.name) CONTAINS '{term.lower()}' 
+                RETURN DISTINCT h.name
+                """
+                records = self.qa_pipeline.run_cypher(cypher)
+                for rec in records:
+                    if rec.get('h.name'):
+                        syndromes.append(rec['h.name'])
+                        
             return list(set(syndromes))
         except Exception as e:
-            logger.error(f"Lỗi khi trích xuất hội chứng từ văn bản: {e}")
+            logger.error(f"Lỗi khi trích xuất hội chứng trực tiếp từ Neo4j: {e}")
             return []
 
     def _get_face_tongue_symptoms_for_syndrome(self, syndrome: str) -> dict:
