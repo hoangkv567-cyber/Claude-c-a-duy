@@ -30,8 +30,9 @@ class TCMFusionPipeline:
             # 1. Nhờ LLM đóng vai trò màng lọc nhiễu (Bỏ các từ: liên tục, quá, bị, tôi...)
             prompt = f"""
             Câu của bệnh nhân: "{text}"
-            Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA thực sự (ví dụ: ho, sốt, đau đầu, nôn mửa, chóng mặt).
-            TUYỆT ĐỐI LOẠI BỎ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
+            Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA thực sự.
+            MỖI TRIỆU CHỨNG PHẢI CÓ TỪ 2 TỪ TRỞ LÊN (ví dụ: ho khan, ho đờm, đau đầu, sốt cao, nôn mửa, chóng mặt).
+            TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
             Chỉ trả về danh sách các từ khóa cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
             """
             import ollama
@@ -45,8 +46,8 @@ class TCMFusionPipeline:
             # Xóa bỏ các ký tự thừa nếu LLM lỡ sinh ra
             keywords_str = keywords_str.replace('"', '').replace("'", "").replace(".", "")
             
-            # Tách thành mảng các từ khóa sạch
-            keywords = [k.strip().lower() for k in keywords_str.split(',') if len(k.strip()) >= 2]
+            # Tách thành mảng các từ khóa sạch (bắt buộc triệu chứng phải từ 2 từ trở lên, ví dụ: ho khan, ho đờm, đau đầu)
+            keywords = [k.strip().lower() for k in keywords_str.split(',') if len(k.strip().split()) >= 2]
             logger.info(f"Từ khóa y khoa đã lọc sạch nhiễu: {keywords}")
             
             # 2. Quét trực tiếp Database với các từ khóa chuẩn xác

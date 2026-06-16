@@ -59,14 +59,11 @@ class TCMQA:
             if not any(stop in bigram for stop in stop_words):
                 bigrams.append(bigram)
         
-        # Phân loại: cụm từ (dài > 3 ký tự) và từ đơn
+        # Phân loại: chỉ giữ các cụm từ từ 2 từ trở lên (độ dài split >= 2)
         final_terms = []
         for term in bigrams:
             if len(term) > 5 and term not in final_terms:
                 final_terms.append(term)
-        for keyword in keywords:
-            if keyword not in final_terms and len(keyword) > 2:
-                final_terms.append(keyword)
         
         return final_terms
 
@@ -77,7 +74,7 @@ class TCMQA:
         {self.db_schema}
         
         CRITICAL RULES FOR CYPHER GENERATION:
-        1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms. Ignore words like tôi, bị, liên tục...
+        1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms. Each symptom MUST contain at least 2 words (e.g., 'ho khan', 'ho đờm', 'đau đầu'). Ignore words like tôi, bị, liên tục...
         
         2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs (where 'ho' falsely matches 'choáng'). You MUST use Regex word boundaries `\\\\b`.
            Syntax: WHERE toLower(t.name) =~ '.*\\\\bkeyword\\\\b.*'
