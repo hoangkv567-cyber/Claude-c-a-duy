@@ -3,36 +3,36 @@ from neo4j import GraphDatabase
 from src.config_loader import load_config
 
 def create_graph(tx, row):
-    # 1. Tạo BenhLy và HoiChung với quan hệ CHIA_THÀNH
+    # 1. Tạo BenhLy và HoiChung với quan hệ CHIA_THANH
     tx.run("""
         MERGE (b:BenhLy {name: $benh})
         MERGE (h:HoiChung {name: $hoichung})
-        MERGE (b)-[:CHIA_THÀNH]->(h)
+        MERGE (b)-[:CHIA_THANH]->(h)
     """, benh=row['tên_bệnh'], hoichung=row['hội_chứng'])
     
-    # 2. Tạo BaiThuoc và quan hệ ĐƯỢC_ĐIỀU_TRỊ_BẰNG
+    # 2. Tạo BaiThuoc và quan hệ DUOC_DIEU_TRI_BANG
     tx.run("""
         MERGE (h:HoiChung {name: $hoichung})
         MERGE (p:BaiThuoc {name: $bai_thuoc})
-        MERGE (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p)
+        MERGE (h)-[:DUOC_DIEU_TRI_BANG]->(p)
     """, hoichung=row['hội_chứng'], bai_thuoc=row['bài_thuốc'])
     
-    # 3. Tạo TrieuChung và quan hệ CÓ_BIỂU_HIỆN
+    # 3. Tạo TrieuChung và quan hệ CO_BIEU_HIEN
     if pd.notna(row['triệu_chứng']):
         for symptom in [s.strip() for s in row['triệu_chứng'].split(',')]:
             tx.run("""
                 MATCH (h:HoiChung {name: $hoichung})
                 MERGE (t:TrieuChung {name: $symptom})
-                MERGE (h)-[:CÓ_BIỂU_HIỆN]->(t)
+                MERGE (h)-[:CO_BIEU_HIEN]->(t)
             """, hoichung=row['hội_chứng'], symptom=symptom)
     
-    # 4. Tạo ViThuoc và quan hệ BAO_GỒM
+    # 4. Tạo ViThuoc và quan hệ BAO_GOM
     if pd.notna(row['vị_thuốc']):
         for herb in [h.strip() for h in row['vị_thuốc'].split(',')]:
             tx.run("""
                 MATCH (p:BaiThuoc {name: $bai_thuoc})
                 MERGE (v:ViThuoc {name: $herb})
-                MERGE (p)-[:BAO_GỒM]->(v)
+                MERGE (p)-[:BAO_GOM]->(v)
             """, bai_thuoc=row['bài_thuốc'], herb=herb)
 
 def main():

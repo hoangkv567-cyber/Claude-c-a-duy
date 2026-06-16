@@ -18,13 +18,13 @@ class TCMQASystem:
         - ViThuoc {name: string}
         
         Relationships:
-        - (:BenhLy)-[:CHIA_THÀNH]->(:HoiChung)
-        - (:HoiChung)-[:CÓ_BIỂU_HIỆN]->(:TrieuChung)
-        - (:HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(:BaiThuoc)
-        - (:BaiThuoc)-[:BAO_GỒM]->(:ViThuoc)
+        - (:BenhLy)-[:CHIA_THANH]->(:HoiChung)
+        - (:HoiChung)-[:CO_BIEU_HIEN]->(:TrieuChung)
+        - (:HoiChung)-[:DUOC_DIEU_TRI_BANG]->(:BaiThuoc)
+        - (:BaiThuoc)-[:BAO_GOM]->(:ViThuoc)
         """
         self.node_labels = ["BenhLy", "HoiChung", "TrieuChung", "BaiThuoc", "ViThuoc"]
-        self.rel_types = ["CHIA_THÀNH", "CÓ_BIỂU_HIỆN", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG", "BAO_GỒM"]
+        self.rel_types = ["CHIA_THANH", "CO_BIEU_HIEN", "DUOC_DIEU_TRI_BANG", "BAO_GOM"]
         
         self.neo4j_client = Neo4jTCMClient(
             uri=self.config.get("neo4j", {}).get("uri", "neo4j+s://c55f875f.databases.neo4j.io"),
