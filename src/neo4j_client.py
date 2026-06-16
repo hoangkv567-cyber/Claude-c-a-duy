@@ -43,6 +43,14 @@ class Neo4jTCMClient:
             )
             return [record["name"] for record in result]
 
+    def get_all_symptoms(self) -> list:
+        """Lấy danh sách tất cả triệu chứng"""
+        with self.driver.session() as session:
+            result = session.run(
+                "MATCH (t:TrieuChung) RETURN t.name AS name ORDER BY name"
+            )
+            return [record["name"] for record in result]
+
     def get_symptoms_by_syndrome(self, syndrome_name: str) -> list:
         """Lấy danh sách triệu chứng theo hội chứng"""
         with self.driver.session() as session:

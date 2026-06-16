@@ -37,35 +37,46 @@ class TCMQA:
     def close(self):
         self.driver.close()
 
+    def _extract_symptoms_by_matching(self, text: str) -> list:
+        if not text:
+            return []
+        text_lower = text.lower()
+        
+        # Lấy tất cả triệu chứng từ database
+        try:
+            db_symptoms = self.neo4j_client.get_all_symptoms()
+        except Exception as e:
+            try:
+                # Nếu neo4j_client.get_all_symptoms() không có/chưa khởi tạo, query trực tiếp từ self.driver
+                with self.driver.session() as session:
+                    result = session.run("MATCH (t:TrieuChung) RETURN t.name AS name")
+                    db_symptoms = [record["name"] for record in result]
+            except Exception as ex:
+                logger.error(f"Lỗi truy vấn tất cả triệu chứng: {ex}")
+                db_symptoms = []
+            
+        # Sắp xếp theo chiều dài giảm dần để ưu tiên triệu chứng dài trước
+        db_symptoms_sorted = sorted(db_symptoms, key=len, reverse=True)
+        
+        extracted = []
+        temp_text = text_lower
+        
+        for symptom in db_symptoms_sorted:
+            sym_l = symptom.lower()
+            if len(sym_l.split()) < 2:
+                continue
+            # Dùng regex \b để khớp từ độc lập tránh substring trượt
+            pattern = rf'\b{re.escape(sym_l)}\b'
+            if re.search(pattern, temp_text):
+                extracted.append(symptom)
+                # Thay bằng khoảng trắng cùng chiều dài để tránh các cụm từ khác đè trùng
+                temp_text = re.sub(pattern, " " * len(sym_l), temp_text, count=1)
+                
+        return extracted
+
     def _preprocess_question(self, question: str) -> list:
-        question_lower = question.lower()
-        question_clean = re.sub(r'[^\w\s]', '', question_lower)
-        words = question_clean.split()
-        
-        stop_words = {"tôi", "bị", "là", "bệnh", "gì", "thì", "và", "uống", "thuốc", 
-                      "để", "muốn", "tìm", "của", "có", "liên tục", "đang", "bị", "nào",
-                      "cho", "của", "với", "tại", "đến", "từ", "về", "các", "mình", "ta",
-                      "được", "phải", "này", "kia", "vậy", "nên", "rất", "quá", "lắm",
-                      "thì", "mà", "là", "mà", "thì", "là", "bị", "đang", "liên tục"}
-        
-        # Lọc từ dừng
-        keywords = [word for word in words if word not in stop_words and len(word) > 2]
-        
-        # Trích xuất cụm từ (bigram) - ưu tiên cụm từ có nghĩa
-        bigrams = []
-        for i in range(len(words) - 1):
-            bigram = f"{words[i]} {words[i+1]}"
-            # Chỉ giữ bigram không chứa từ dừng
-            if not any(stop in bigram for stop in stop_words):
-                bigrams.append(bigram)
-        
-        # Phân loại: chỉ giữ các cụm từ từ 2 từ trở lên (độ dài split >= 2)
-        final_terms = []
-        for term in bigrams:
-            if len(term) > 5 and term not in final_terms:
-                final_terms.append(term)
-        
-        return final_terms
+        # Sử dụng thuật toán khớp triệu chứng trực tiếp từ database (Longest Match First)
+        return self._extract_symptoms_by_matching(question)
 
     def text_to_cypher(self, user_question: str) -> str:
         prompt = f"""
