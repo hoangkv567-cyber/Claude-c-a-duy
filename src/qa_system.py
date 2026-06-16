@@ -76,44 +76,54 @@ class TCMQA:
         Schema:
         {self.db_schema}
         
-        CRITICAL RULES:
-        1. EXTRACT FULL PHRASES: Extract full meaningful phrases (e.g., 'ho liên tục', 'khó thở').
-        2. ALWAYS use `WHERE toLower(n.name) CONTAINS toLower('keyword')` for fuzzy searching.
-        3. Keep Vietnamese accents strictly for relationships: CÓ_BIỂU_HIỆN, CHIA_THÀNH, ĐƯỢC_ĐIỀU_TRỊ_BẰNG, BAO_GỒM.
-        4. Follow arrows strictly: (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung).
-        5. DYNAMIC RETURN: 
-           - ONLY diseases ("bệnh"): return `b.name`.
-           - ONLY medicine ("thuốc"): return `p.name`.
-           - **UNSPECIFIED INTENT (no 'bệnh' or 'thuốc'): ALWAYS return `b.name` from the symptom-path.** 
-             *Do NOT invent new syndromes or prescriptions.*
-             *Example: `MATCH (t:TrieuChung) WHERE toLower(t.name) CONTAINS toLower('ho liên tục') MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t) RETURN DISTINCT b.name`*
-        6. Output ONLY a SINGLE raw Cypher query. No explanations.
-        7. FOR MULTIPLE SYMPTOMS: Use a separate `MATCH` for each symptom.
+        CRITICAL RULES FOR CYPHER GENERATION:
+        1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms from the user's question. 
+           - Example: from "tôi bị ho liên tục", extract ONLY 'ho'. 
+           - Example: from "đau đầu dữ dội", extract ONLY 'đau đầu'. 
+           IGNORE all adverbs, pronouns, and descriptors of time/intensity (tôi, bị, liên tục, dữ dội, rất, quá...).
         
-        --- EXAMPLES ---
-        User: "Tôi bị đau đầu là bệnh gì?" -> Cypher: `...RETURN DISTINCT b.name`
-        User: "Tôi bị ho liên tục" (no target) -> Cypher: `...RETURN DISTINCT b.name`
-        User: "Tôi bị ho và khó thở" -> Cypher: Use separate MATCH for each, RETURN DISTINCT b.name
-        ----------------
+        2. FUZZY MATCHING: ALWAYS use `WHERE toLower(t.name) CONTAINS toLower('keyword')` on the `TrieuChung` node.
+        
+        3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS): 
+           You MUST ALWAYS use `OPTIONAL MATCH` for diseases and medicines, and you MUST ALWAYS return `b.name`, `h.name`, and `p.name` simultaneously.
+           
+           Strict Template to follow:
+           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
+           WHERE toLower(t.name) CONTAINS toLower('keyword1')
+           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
+           OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+           RETURN DISTINCT b.name, h.name, p.name
+        
+        4. FOR MULTIPLE SYMPTOMS: 
+           Use multiple MATCH clauses linked to the SAME syndrome node (h).
+           Example for "ho và sốt":
+           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) CONTAINS toLower('ho')
+           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) CONTAINS toLower('sốt')
+           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
+           OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+           RETURN DISTINCT b.name, h.name, p.name
 
-        Now translate this user question:
+        5. Output ONLY a SINGLE raw Cypher query. Do NOT use markdown code blocks (like ```cypher). No explanations.
+        
         User Question: "{user_question}"
         Cypher:
         """
         try:
+            import ollama
             response = ollama.chat(
                 model=self.llm_model,
                 messages=[
-                    {"role": "system", "content": "You are a precise Cypher query generator. Always default to returning `b.name` if the user doesn't specify 'bệnh' or 'thuốc'. Do NOT hallucinate."},
+                    {"role": "system", "content": "You are a precise Cypher query generator. Output only the raw query without any markdown formatting."},
                     {"role": "user", "content": prompt}
                 ],
                 options={
-                    "temperature": self.temperature,
+                    "temperature": 0.0,  # Đưa temperature về 0.0 để loại bỏ hoàn toàn tính ngẫu nhiên
                     "seed": self.seed,
                     "top_p": self.top_p
                 }
             )
             cypher = response['message']['content'].strip()
+            # Dọn dẹp ký tự markdown nếu LLM lỡ sinh ra
             cypher = cypher.replace("```cypher", "").replace("```", "").strip()
             return cypher
         except Exception as e:
