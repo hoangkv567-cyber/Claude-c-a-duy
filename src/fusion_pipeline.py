@@ -385,13 +385,29 @@ class TCMFusionPipeline:
             if raw_vision_data and isinstance(raw_vision_data, dict):
                 detected_symptoms = raw_vision_data.get("detected_symptoms", [])
                 
-            logger.info("Đang sinh câu trả lời giải thích biện chứng luận trị bằng LLM...")
-            explainable_answer = self._generate_explainable_answer(
-                user_symptoms=user_symptoms,
-                detected_symptoms=detected_symptoms,
-                final_syndromes=final_syndromes,
-                kg_context=kg_context_str
-            )
+            # ---------------------------------------------------------
+            # THÊM CHỐT CHẶN ẢO GIÁC LLM (ANTI-HALLUCINATION BLOCK)
+            # ---------------------------------------------------------
+            if not treatments:
+                logger.warning(f"ĐÃ CHẶN ẢO GIÁC: Neo4j không có bài thuốc cho {final_syndromes}")
+                explainable_answer = (
+                    f"### Kết luận chẩn đoán sơ bộ\n"
+                    f"Hệ thống nhận diện dấu hiệu liên quan đến: **{', '.join(final_syndromes) if final_syndromes else 'Chưa rõ'}**.\n\n"
+                    f"### Biện chứng & Phương dược\n"
+                    f"Hiện tại, trong Cơ sở dữ liệu Đồ thị Tri thức (Neo4j) của hệ thống **KHÔNG CÓ** bài thuốc và vị thuốc chuẩn xác cho trường hợp này.\n\n"
+                    f"> ⚠️ **Lưu ý an toàn Y tế:** Để tránh hiện tượng AI tự suy diễn (Hallucination) và kê đơn sai lệch, hệ thống xin phép không đưa ra phương dược điều trị tự động. \n\n"
+                    f"**Lời khuyên:** Vui lòng mô tả lại triệu chứng của bạn bằng các từ khóa rõ ràng hơn (Ví dụ: thay vì *'ho liên tục'*, hãy ghi *'ho khan'*, *'ho có đờm vàng'*...) để hệ thống truy xuất chính xác."
+                )
+            else:
+                # Nếu CÓ bài thuốc thật từ Neo4j thì mới cho phép LLM giải thích
+                logger.info("Đang sinh câu trả lời giải thích biện chứng luận trị bằng LLM...")
+                explainable_answer = self._generate_explainable_answer(
+                    user_symptoms=user_symptoms,
+                    detected_symptoms=detected_symptoms,
+                    final_syndromes=final_syndromes,
+                    kg_context=kg_context_str
+                )
+            # ---------------------------------------------------------
             
             qa_result = {
                 "answer": explainable_answer,
