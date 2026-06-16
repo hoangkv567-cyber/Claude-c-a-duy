@@ -38,9 +38,9 @@ def create_graph(tx, row):
 def main():
     config = load_config("config/config.yaml")
     neo4j_cfg = config.get("neo4j", {})
-    uri = neo4j_cfg.get("uri", "neo4j://localhost:7687")
-    user = neo4j_cfg.get("user", "neo4j")
-    password = neo4j_cfg.get("password", "12345678")
+    uri = neo4j_cfg.get("uri", "neo4j+s://c55f875f.databases.neo4j.io")
+    user = neo4j_cfg.get("user", "c55f875f")
+    password = neo4j_cfg.get("password", "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w")
     csv_path = config.get("dataset", {}).get("csv_path", "data/tcm_data_600_clean.csv")
 
     driver = GraphDatabase.driver(uri, auth=(user, password))

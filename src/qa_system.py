@@ -19,8 +19,8 @@ class TCMQA:
         # Kết nối Neo4j
         neo4j_cfg = self.config.get("neo4j", {})
         self.driver = GraphDatabase.driver(
-            neo4j_cfg.get("uri", "neo4j://localhost:7687"),
-            auth=(neo4j_cfg.get("user", "neo4j"), neo4j_cfg.get("password", "12345678"))
+            neo4j_cfg.get("uri", "neo4j+s://c55f875f.databases.neo4j.io"),
+            auth=(neo4j_cfg.get("user", "c55f875f"), neo4j_cfg.get("password", "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w"))
         )
         logger.info(f"Đã kết nối Neo4j: {neo4j_cfg.get('uri')}")
 

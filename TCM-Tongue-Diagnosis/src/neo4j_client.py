@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Neo4jTCMClient:
-    def __init__(self, uri="neo4j://localhost:7687", user="neo4j", password="12345678"):
+    def __init__(self, uri="neo4j+s://c55f875f.databases.neo4j.io", user="c55f875f", password="Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w"):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
         logger.info(f"Kết nối Neo4j thành công: {uri}")
 

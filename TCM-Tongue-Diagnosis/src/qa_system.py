@@ -27,9 +27,9 @@ class TCMQASystem:
         self.rel_types = ["CHIA_THÀNH", "CÓ_BIỂU_HIỆN", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG", "BAO_GỒM"]
         
         self.neo4j_client = Neo4jTCMClient(
-            uri=self.config.get("neo4j", {}).get("uri", "neo4j://localhost:7687"),
-            user=self.config.get("neo4j", {}).get("user", "neo4j"),
-            password=self.config.get("neo4j", {}).get("password", "12345678")
+            uri=self.config.get("neo4j", {}).get("uri", "neo4j+s://c55f875f.databases.neo4j.io"),
+            user=self.config.get("neo4j", {}).get("user", "c55f875f"),
+            password=self.config.get("neo4j", {}).get("password", "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w")
         )
 
     def text_to_cypher(self, question: str) -> str:

@@ -19,7 +19,7 @@ def load_config(config_path="config/config.yaml"):
         print("Sử dụng cấu hình mặc định...")
         return {
             "ollama": {"model": "llava:7b"},
-            "neo4j": {"uri": "neo4j://localhost:7687", "user": "neo4j", "password": "12345678"},
+            "neo4j": {"uri": "neo4j+s://c55f875f.databases.neo4j.io", "user": "c55f875f", "password": "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w"},
             "mapping": {"symptom_to_syndrome": "data/mapping/symptom_to_syndrome.json"},
             "api": {"host": "0.0.0.0", "port": 8000}
         }

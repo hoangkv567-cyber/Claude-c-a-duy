@@ -32,9 +32,9 @@ class TCMTonguePipeline:
         
         # Lấy các tham số cấu hình dạng lồng nhau
         ollama_model = self.config.get("ollama", {}).get("model", "llava:7b")
-        neo4j_uri = self.config.get("neo4j", {}).get("uri", "neo4j://localhost:7687")
-        neo4j_user = self.config.get("neo4j", {}).get("user", "neo4j")
-        neo4j_password = self.config.get("neo4j", {}).get("password", "12345678")
+        neo4j_uri = self.config.get("neo4j", {}).get("uri", "neo4j+s://c55f875f.databases.neo4j.io")
+        neo4j_user = self.config.get("neo4j", {}).get("user", "c55f875f")
+        neo4j_password = self.config.get("neo4j", {}).get("password", "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w")
         
         self.ollama_client = OllamaTCMClient(model_name=ollama_model)
         self.neo4j_client = Neo4jTCMClient(uri=neo4j_uri, user=neo4j_user, password=neo4j_password)
