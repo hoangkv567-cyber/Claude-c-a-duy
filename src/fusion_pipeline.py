@@ -9,12 +9,15 @@ class TCMFusionPipeline:
     def __init__(self, config: dict = None):
         """Khởi tạo toàn bộ lõi AI của hệ thống"""
         logger.info("Đang khởi tạo Hệ thống Hợp nhất (Fusion Pipeline)...")
+        from src.config_loader import load_config
+        config = config or load_config()
+
         # Module Vọng chẩn (LLaVA - Phân tích ảnh)
         self.vision_pipeline = TCMTonguePipeline(config=config)
-        
+
         # Module Vấn chẩn & Đồ thị (Qwen + Neo4j)
         self.qa_pipeline = TCMQA(config=config)
-        
+
         # Gán neo4j_client cho qa_pipeline để tương thích ngược với code yêu cầu
         self.qa_pipeline.neo4j_client = self.vision_pipeline.neo4j_client
         logger.info("Khởi tạo hoàn tất!")

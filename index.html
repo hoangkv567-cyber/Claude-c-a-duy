@@ -3,55 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng Khám AI - HealthWatch</title>
+    <title>Hệ Thống Chẩn Đoán Bệnh Đông Y</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Thư viện marked.js để render Markdown chính xác -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Thư viện Vis-Network cho sơ đồ mạng lưới đồ thị tri thức tương tác -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Định nghĩa lại CSS hiển thị Markdown do Tailwind mặc định loại bỏ định dạng danh sách */
+        .markdown-content h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f766e;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            border-bottom: 2px solid #ccfbf1;
+            padding-bottom: 0.25rem;
+        }
+        .markdown-content h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #115e59;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .markdown-content p {
+            margin-bottom: 0.75rem;
+            line-height: 1.625;
+            color: #334155;
+        }
+        .markdown-content ul {
+            list-style-type: disc !important;
+            padding-left: 1.5rem !important;
+            margin-bottom: 1rem !important;
+        }
+        .markdown-content ol {
+            list-style-type: decimal !important;
+            padding-left: 1.5rem !important;
+            margin-bottom: 1rem !important;
+        }
+        .markdown-content li {
+            margin-bottom: 0.35rem;
+            line-height: 1.5;
+            color: #475569;
+        }
+        .markdown-content strong {
+            color: #0d9488;
+            font-weight: 600;
+        }
+        .markdown-content code {
+            background-color: #f1f5f9;
+            color: #be123c;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen pb-12">
 
-    <div class="max-w-3xl mx-auto py-10 px-4">
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="bg-teal-600 px-6 py-4">
-                <h1 class="text-2xl font-bold text-white text-center">Hệ thống chẩn đoán bệnh Đông y</h1>
-                <p class="text-teal-100 text-center text-sm mt-1">Chẩn đoán Đông y qua Vọng chẩn & Vấn chẩn</p>
-            </div>
-
-            <form id="diagnoseForm" class="p-6 space-y-6">
+    <!-- Thanh Tiêu đề có nút bánh răng cài đặt URL API -->
+    <header class="bg-teal-700 shadow-md sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center text-white">
+            <div class="flex items-center space-x-3">
+                <div class="bg-teal-600 p-2 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Mô tả triệu chứng của bạn</label>
-                    <textarea id="symptoms" rows="3" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-teal-500 focus:border-teal-500 outline-none" placeholder="Ví dụ: Tôi bị ho liên tục, khó thở và có nhiều đờm trắng..."></textarea>
+                    <h1 class="text-xl font-bold">Hệ thống chẩn đoán Đông y</h1>
+                    <p class="text-xs text-teal-100">Chẩn đoán Đông y qua Vọng chẩn & Vấn chẩn</p>
+                </div>
+            </div>
+            
+            <!-- Nút Bánh răng Cài đặt API Ngrok -->
+            <button id="settingsBtn" class="bg-teal-600 hover:bg-teal-500 p-2 rounded-lg transition-all duration-200" title="Cấu hình kết nối Ngrok">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Modal Cài đặt API Ngrok -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <span>Cấu hình Kết nối API</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">Dán liên kết Ngrok mới của bạn vào đây nếu bạn khởi động lại Ngrok và bị đổi URL.</p>
+            <div class="mt-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1">API Endpoint URL</label>
+                <input type="text" id="apiUrlInput" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none" placeholder="Ví dụ: https://xxxx.ngrok-free.dev">
+            </div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <button id="closeSettings" class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg">Hủy</button>
+                <button id="saveSettings" class="px-5 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg shadow-sm">Lưu cấu hình</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khung chính Giao diện -->
+    <div class="max-w-3xl mx-auto mt-8 px-4">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+            
+            <form id="diagnoseForm" class="p-6 space-y-6">
+                <!-- Vấn chẩn -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Mô tả triệu chứng của bạn (Vấn chẩn)</label>
+                    <textarea id="symptoms" rows="3" class="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition" placeholder="Ví dụ: tôi bị nôn, đau bụng..."></textarea>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">📸 Tải lên ảnh Khuôn mặt</label>
-                        <input type="file" id="faceImg" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 w-full cursor-pointer"/>
+                <!-- Vọng chẩn -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition duration-200">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">📷 Tải lên ảnh Khuôn mặt</label>
+                        <input type="file" id="faceImg" accept="image/*" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 w-full cursor-pointer"/>
+                        <div id="facePreview" class="mt-2 hidden">
+                            <img src="" class="h-20 mx-auto rounded border border-slate-200">
+                        </div>
                     </div>
                     
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">👅 Tải lên ảnh Lưỡi</label>
-                        <input type="file" id="tongueImg" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 w-full cursor-pointer"/>
+                    <div class="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition duration-200">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">👅 Tải lên ảnh Lưỡi</label>
+                        <input type="file" id="tongueImg" accept="image/*" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 w-full cursor-pointer"/>
+                        <div id="tonguePreview" class="mt-2 hidden">
+                            <img src="" class="h-20 mx-auto rounded border border-slate-200">
+                        </div>
                     </div>
                 </div>
 
-                <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-                    <span>Tiến hành chẩn đoán AI</span>
+                <button type="submit" id="submitBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-200 flex items-center justify-center space-x-2">
+                    <span id="btnText">Tiến hành chẩn đoán AI</span>
                 </button>
             </form>
 
-            <div id="resultArea" class="hidden bg-gray-50 border-t border-gray-200 p-6">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <span>📋 Kết Quả Phân Tích</span>
+            <!-- Khu vực hiển thị kết quả -->
+            <div id="resultArea" class="hidden bg-slate-50 border-t border-slate-200 p-6 space-y-6">
+                <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                    <span>📋</span>
+                    <span>Kết Quả Phân Tích</span>
                 </h2>
                 
-                <div class="space-y-4">
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                        <h3 class="font-semibold text-teal-700 mb-2">💬 Phân tích Triệu chứng (Neo4j):</h3>
-                        <p id="textResult" class="text-gray-600 text-sm leading-relaxed"></p>
+                <div class="space-y-6">
+                    <!-- Kết quả Vọng chẩn (LLaVA) -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-teal-800 text-sm mb-3 flex items-center space-x-1.5 uppercase tracking-wide border-b pb-2">
+                            <span>👁️</span>
+                            <span>Phân tích Hình ảnh (LLaVA):</span>
+                        </h3>
+                        <p id="visionResult" class="text-slate-600 text-sm leading-relaxed"></p>
                     </div>
 
-                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                        <h3 class="font-semibold text-teal-700 mb-2">👁️ Phân tích Hình ảnh (LLaVA):</h3>
-                        <p id="visionResult" class="text-gray-600 text-sm leading-relaxed"></p>
+                    <!-- Kết quả Vấn chẩn (Neo4j) -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-teal-800 text-sm mb-3 flex items-center space-x-1.5 uppercase tracking-wide border-b pb-2">
+                            <span>💬</span>
+                            <span>Phân tích Triệu chứng (Neo4j):</span>
+                        </h3>
+                        <div id="textResult" class="markdown-content text-sm"></div>
+                    </div>
+
+                    <!-- Sơ đồ Đồ thị suy luận (Vis.js Network) -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-teal-800 text-sm mb-2 flex items-center space-x-1.5 uppercase tracking-wide border-b pb-2">
+                            <span>🕸️</span>
+                            <span>Đồ thị lập luận y lý trực quan</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-3">Mô tả trực quan đường đi suy luận từ Triệu chứng -> Hội chứng -> Bài thuốc điều trị.</p>
+                        <div id="graphContainer" class="h-[350px] w-full bg-slate-50/50 rounded-lg border border-slate-100"></div>
                     </div>
                 </div>
             </div>
@@ -59,44 +192,70 @@
     </div>
 
     <script>
-        function formatMarkdown(text) {
-            if (!text) return "";
-            let html = text;
-            // Thay thế tiêu đề ###
-            html = html.replace(/^### (.*$)/gim, '<h4 class="font-bold text-gray-800 mt-4 mb-2 border-b pb-1">$1</h4>');
-            // Thay thế tiêu đề ##
-            html = html.replace(/^## (.*$)/gim, '<h3 class="font-bold text-teal-700 mt-5 mb-2">$1</h3>');
-            // Thay thế chữ in đậm **text**
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>');
-            // Thay thế mã code dạng `code`
-            html = html.replace(/`(.*?)`/g, '<code class="bg-gray-100 text-rose-600 px-1.5 py-0.5 rounded font-mono text-xs border border-gray-200">$1</code>');
-            // Thay thế danh sách dòng bắt đầu bằng - hoặc *
-            html = html.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc text-gray-600 mt-1">$1</li>');
-            // Thay thế danh sách số 1. 2.
-            html = html.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li class="ml-4 list-decimal text-gray-600 mt-1">$2</li>');
-            
-            // Tách các đoạn văn để bọc p nếu không phải là tiêu đề/danh sách
-            html = html.split('\n').map(line => {
-                const trimmed = line.trim();
-                if (!trimmed) return "";
-                if (trimmed.startsWith('<li') || trimmed.startsWith('<h')) {
-                    return line;
-                }
-                return `<p class="mt-2 text-gray-700 leading-relaxed">${line}</p>`;
-            }).join('\n');
-            
-            return html;
-        }
+        // Cấu hình URL mặc định: Tự động trỏ thẳng về link Ngrok đang hoạt động của bạn!
+        const DEFAULT_API_URL = "https://huddle-wreckage-rounding.ngrok-free.dev";
+        const STORAGE_KEY = "healthwatch_api_base_url";
+        
+        // Ưu tiên đọc cấu hình lưu trong trình duyệt trước, nếu không có sẽ tự nhận link Ngrok mặc định của bạn
+        let apiBaseUrl = localStorage.getItem(STORAGE_KEY) || DEFAULT_API_URL;
 
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettings = document.getElementById('closeSettings');
+        const saveSettings = document.getElementById('saveSettings');
+        const apiUrlInput = document.getElementById('apiUrlInput');
+
+        apiUrlInput.value = apiBaseUrl;
+
+        settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+        closeSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
+        
+        saveSettings.addEventListener('click', () => {
+            let url = apiUrlInput.value.trim();
+            if (url.endsWith('/')) {
+                url = url.slice(0, -1);
+            }
+            if (url) {
+                apiBaseUrl = url;
+                localStorage.setItem(STORAGE_KEY, url);
+                alert("Đã lưu kết nối API Endpoint: " + url);
+                settingsModal.classList.add('hidden');
+            }
+        });
+
+        // Hàm xem trước tệp ảnh khi tải lên
+        function registerPreview(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            const img = preview.querySelector('img');
+
+            input.addEventListener('change', () => {
+                const file = input.files[0];
+                if (file) {
+                    const r = new FileReader();
+                    r.onload = (e) => {
+                        img.src = e.target.result;
+                        preview.classList.remove('hidden');
+                    };
+                    r.readAsDataURL(file);
+                } else {
+                    preview.classList.add('hidden');
+                }
+            });
+        }
+        registerPreview('faceImg', 'facePreview');
+        registerPreview('tongueImg', 'tonguePreview');
+
+        // Gửi Form chẩn đoán
         document.getElementById('diagnoseForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
             const resultArea = document.getElementById('resultArea');
             const textResult = document.getElementById('textResult');
             const visionResult = document.getElementById('visionResult');
 
-            // Lấy dữ liệu từ form
             const symptoms = document.getElementById('symptoms').value;
             const faceFile = document.getElementById('faceImg').files[0];
             const tongueFile = document.getElementById('tongueImg').files[0];
@@ -106,20 +265,25 @@
                 return;
             }
 
-            // Đóng gói dữ liệu dạng Multipart/Form-Data
             const formData = new FormData();
             formData.append('symptoms', symptoms);
             if(faceFile) formData.append('face_img', faceFile);
             if(tongueFile) formData.append('tongue_img', tongueFile);
 
-            // Cập nhật UI lúc đang load
-            submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> AI Đang xử lý...';
+            // Bật trạng thái loading
             submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Hệ thống đang lập luận y lý (15-30s)...</span>
+            `;
             resultArea.classList.add('hidden');
 
             try {
-                // Gửi Request tới FastAPI
-                const response = await fetch('http://localhost:8000/api/diagnose', {
+                // Gọi API Backend qua Endpoint kết nối
+                const response = await fetch(`${apiBaseUrl}/api/diagnose`, {
                     method: 'POST',
                     body: formData
                 });
@@ -129,42 +293,135 @@
                 if(response.ok) {
                     const data = json.data;
                     
-                    // Hiển thị kết quả Vấn chẩn (Graph RAG)
+                    // 1. Hiển thị chẩn đoán (đã qua marked.js sửa lỗi dính chữ)
                     if(data.diagnosis_result && data.diagnosis_result.answer) {
+                        const formattedHTML = marked.parse(data.diagnosis_result.answer);
                         textResult.innerHTML = `
-                            <div class="mb-3 text-sm bg-teal-50 p-2 rounded text-teal-800">
-                                <strong>Chuỗi truy vấn AI đã gộp:</strong> ${data.input_fusion}
+                            <div class="mb-4 text-xs bg-teal-50 p-3 rounded-lg text-teal-800 border border-teal-100">
+                                <strong>Chuỗi triệu chứng đã gộp:</strong> ${data.input_fusion}
                             </div>
-                            <div class="text-sm">
-                                ${formatMarkdown(data.diagnosis_result.answer)}
+                            <div>
+                                ${formattedHTML}
                             </div>
                         `;
                     } else {
-                        textResult.innerHTML = "<span class='text-gray-400 italic'>Hệ thống chưa tìm thấy bệnh lý phù hợp với tổ hợp triệu chứng này.</span>";
+                        textResult.innerHTML = "<span class='text-slate-400 italic'>Hệ thống chưa tìm thấy bệnh lý phù hợp.</span>";
                     }
 
-                    // Hiển thị kết quả Vọng chẩn (LLaVA)
+                    // 2. Hiển thị kết quả Vọng chẩn (LLaVA)
                     if(data.vision_details && data.vision_details.analysis) {
-                        visionResult.innerHTML = `<strong>Triệu chứng AI nhìn thấy:</strong> <span class="text-blue-600">${data.vision_details.analysis}</span>`;
+                        visionResult.innerHTML = `Triệu chứng AI nhìn thấy: <span class="text-blue-600 font-bold">${data.vision_details.analysis}</span>`;
                     } else {
-                        visionResult.innerHTML = "<span class='text-gray-400 italic'>Không tải lên ảnh hoặc AI chưa phát hiện được triệu chứng.</span>";
+                        visionResult.innerHTML = "<span class='text-slate-400 italic'>AI chưa phát hiện được triệu chứng bất thường qua ảnh.</span>";
                     }
 
                     resultArea.classList.remove('hidden');
+
+                    // 3. Trực quan hóa Đồ thị mạng lưới liên kết Vis-Network
+                    buildNetworkGraph(data);
                 } else {
-                    alert("Lỗi API: " + json.detail);
+                    alert("Gặp lỗi từ API: " + json.detail);
                 }
 
             } catch (error) {
                 console.error(error);
-                alert("Không thể kết nối đến máy chủ. Hãy chắc chắn API đang chạy ở cổng 8000.");
+                alert("Lỗi: Không thể kết nối tới Backend.\nHướng dẫn: Hãy chắc chắn máy tính cá nhân của bạn đã mở uvicorn và ngrok thành công!");
             } finally {
-                // Khôi phục nút
-                submitBtn.innerHTML = 'Tiến hành chẩn đoán AI';
                 submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Tiến hành chẩn đoán AI</span>';
             }
         });
 
+        // Hàm vẽ mạng lưới đồ thị tri thức thông minh
+        function buildNetworkGraph(data) {
+            const container = document.getElementById('graphContainer');
+            const nodes = [];
+            const edges = [];
+
+            // Gốc: Bệnh nhân
+            nodes.push({ id: 'patient', label: 'Bệnh Nhân', color: '#0d9488', font: { color: '#ffffff', size: 14, bold: true }, shape: 'circle' });
+
+            // Bóc tách danh sách triệu chứng
+            let symptoms = [];
+            if(data.vision_details && data.vision_details.analysis) {
+                symptoms = data.vision_details.analysis.split(',').map(s => s.trim());
+            }
+
+            symptoms.forEach((sym, index) => {
+                const symId = `sym_${index}`;
+                nodes.push({
+                    id: symId,
+                    label: sym,
+                    color: { background: '#fee2e2', border: '#fca5a5' },
+                    font: { color: '#991b1b', size: 12 },
+                    shape: 'box'
+                });
+                edges.push({ from: 'patient', to: symId, label: 'có biểu hiện', color: '#fca5a5', font: { size: 9 } });
+            });
+
+            // Lập bản đồ cho Hội chứng & Bài thuốc
+            if(data.vision_details && data.vision_details.direct_treatments) {
+                data.vision_details.direct_treatments.forEach((treat, idx) => {
+                    const synId = `syn_${idx}`;
+                    const pId = `pres_${idx}`;
+
+                    // Node Hội chứng
+                    nodes.push({
+                        id: synId,
+                        label: treat.hoi_chung,
+                        color: { background: '#fef9c3', border: '#fef08a' },
+                        font: { color: '#854d0e', size: 12, bold: true },
+                        shape: 'ellipse'
+                    });
+
+                    // Kết nối các triệu chứng đến hội chứng
+                    symptoms.forEach((sym, sIdx) => {
+                        edges.push({ from: `sym_${sIdx}`, to: synId, color: '#fef08a', style: 'dashed' });
+                    });
+
+                    // Node Bài thuốc
+                    nodes.push({
+                        id: pId,
+                        label: treat.bai_thuoc,
+                        color: { background: '#dcfce7', border: '#bbf7d0' },
+                        font: { color: '#166534', size: 12, bold: true },
+                        shape: 'hexagon'
+                    });
+
+                    edges.push({ from: synId, to: pId, label: 'trị bằng', color: '#bbf7d0', font: { size: 9 } });
+
+                    // Tạo Node Vị thuốc
+                    if(treat.vi_thuoc && Array.isArray(treat.vi_thuoc)) {
+                        treat.vi_thuoc.slice(0, 4).forEach((vi, vIdx) => {
+                            const herbId = `herb_${idx}_${vIdx}`;
+                            nodes.push({
+                                id: herbId,
+                                label: vi,
+                                color: { background: '#e0f2fe', border: '#bae6fd' },
+                                font: { color: '#075985', size: 10 },
+                                shape: 'ellipse'
+                            });
+                            edges.push({ from: pId, to: herbId, label: 'chứa', color: '#bae6fd', font: { size: 8 } });
+                        });
+                    }
+                });
+            }
+
+            const visNodes = new vis.DataSet(nodes);
+            const visEdges = new vis.DataSet(edges);
+
+            const options = {
+                nodes: { borderWidth: 2, shadow: true },
+                edges: { width: 2, shadow: true, arrows: { to: { enabled: true, scaleFactor: 0.8 } } },
+                physics: {
+                    forceAtlas2Based: { gravitationalConstant: -26, centralGravity: 0.005, springLength: 120, springStrength: 0.08 },
+                    solver: 'forceAtlas2Based',
+                    stabilization: { iterations: 100 }
+                }
+            };
+
+            new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+        }
     </script>
 </body>
 </html>

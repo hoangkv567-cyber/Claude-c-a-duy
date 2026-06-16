@@ -3,6 +3,7 @@ from src.mapping import SymptomToSyndromeMapper
 from src.ollama_client import OllamaTCMClient
 from src.neo4j_client import Neo4jTCMClient
 from src.utils import logger
+from src.config_loader import load_config
 
 class TCMTonguePipeline:
     def __init__(self, config: dict = None, modality: str = "tongue"):
@@ -12,7 +13,7 @@ class TCMTonguePipeline:
         modality: str ("tongue" hoặc "face")
         """
         self.modality = modality
-        self.config = config or {}
+        self.config = config or load_config()
         
         # Tự động quét và tải toàn bộ thư mục mapping để hỗ trợ song song cả Lưỡi và Mặt
         import os
