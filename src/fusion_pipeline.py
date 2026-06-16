@@ -18,24 +18,17 @@ class TCMFusionPipeline:
         # Module Vấn chẩn & Đồ thị (Qwen + Neo4j)
         self.qa_pipeline = TCMQA(config=config)
 
-        # Gán neo4j_client cho qa_pipeline để tương thích ngược với code yêu cầu
         self.qa_pipeline.neo4j_client = self.vision_pipeline.neo4j_client
         logger.info("Khởi tạo hoàn tất!")
 
     def _extract_syndromes_from_text(self, text: str) -> list:
-        """Trích xuất hội chứng từ câu mô tả của bệnh nhân bằng cách gọi QA pipeline."""
         if not text:
             return []
         try:
-            # Dùng hàm execute_and_answer của QA pipeline để truy vấn
-            # Ở đây ta tạo một câu hỏi đơn giản để lấy hội chứng
             result = self.qa_pipeline.execute_and_answer(f"{text}. Đó là hội chứng gì?")
-            
-            # Kiểm tra nếu trả về có key 'syndromes' trực tiếp
             if result and "syndromes" in result:
                 return result.get("syndromes", [])
                 
-            # Trích xuất hội chứng từ key 'data' nếu có
             syndromes = []
             if result and "data" in result:
                 for record in result["data"]:
@@ -48,16 +41,12 @@ class TCMFusionPipeline:
             return []
 
     def _get_face_tongue_symptoms_for_syndrome(self, syndrome: str) -> dict:
-        """Lấy các triệu chứng mặt và lưỡi dự kiến cho một hội chứng nhất định."""
-        # mapping nghịch đảo từ hội chứng -> triệu chứng lưỡi/mặt xây dựng từ file mapping đã có
         tongue_symptoms = []
         face_symptoms = []
-        
         try:
             import json
             import os
             
-            # Đọc mapping lưỡi từ symptom_to_syndrome.json
             tongue_file = "data/mapping/symptom_to_syndrome.json"
             if os.path.exists(tongue_file):
                 with open(tongue_file, "r", encoding="utf-8") as f:
@@ -67,7 +56,6 @@ class TCMFusionPipeline:
                         if symptom not in tongue_symptoms:
                             tongue_symptoms.append(symptom)
                             
-            # Đọc mapping mặt từ face_to_syndrome.json
             face_file = "data/mapping/face_to_syndrome.json"
             if os.path.exists(face_file):
                 with open(face_file, "r", encoding="utf-8") as f:
@@ -77,9 +65,8 @@ class TCMFusionPipeline:
                         if symptom not in face_symptoms:
                             face_symptoms.append(symptom)
         except Exception as e:
-            logger.error(f"Lỗi khi đọc file mapping nghịch đảo: {e}")
+            logger.error(f"Lỗi đọc file mapping: {e}")
             
-        # Nếu không có từ file mapping, truy vấn nghịch đảo qua Neo4j
         if not tongue_symptoms and not face_symptoms:
             try:
                 symptoms = self.vision_pipeline.neo4j_client.get_symptoms_by_syndrome(syndrome)
@@ -91,63 +78,36 @@ class TCMFusionPipeline:
                     else:
                         tongue_symptoms.append(s)
             except Exception as e:
-                logger.error(f"Lỗi khi lấy triệu chứng từ Neo4j: {e}")
+                logger.error(f"Lỗi lấy triệu chứng Neo4j: {e}")
                 
-        # Fallback mặc định nếu không có dữ liệu
-        if not tongue_symptoms:
-            tongue_symptoms = ["Lưỡi nhợt", "Lưỡi bệu có dấu răng"]
-        if not face_symptoms:
-            face_symptoms = ["Mặt nhợt nhạt"]
+        if not tongue_symptoms: tongue_symptoms = ["Lưỡi nhợt", "Lưỡi bệu có dấu răng"]
+        if not face_symptoms: face_symptoms = ["Mặt nhợt nhạt"]
             
-        return {
-            "tongue": tongue_symptoms,
-            "face": face_symptoms
-        }
+        return {"tongue": tongue_symptoms, "face": face_symptoms}
 
     def _filter_syndromes_with_llm(self, symptoms: list, candidate_syndromes: list) -> list:
-        """Sử dụng LLM (Qwen) để lọc và chọn ra các hội chứng phù hợp nhất với tổ hợp triệu chứng, loại bỏ các hội chứng mâu thuẫn hoặc không liên quan."""
-        if not candidate_syndromes:
-            return []
-        if len(candidate_syndromes) <= 1:
-            return candidate_syndromes
+        if not candidate_syndromes: return []
+        if len(candidate_syndromes) <= 1: return candidate_syndromes
             
         symptoms_str = ", ".join(symptoms)
         candidates_str = ", ".join(candidate_syndromes)
         
         prompt = f"""
-        Vai trò: Bạn là một Bác sĩ Đông y giàu kinh nghiệm.
-        Bệnh nhân có tổ hợp triệu chứng sau: {symptoms_str}
-        Các hội chứng dự kiến được ánh xạ từ triệu chứng là: {candidates_str}
-        
-        Nhiệm vụ:
-        1. Phân tích xem các hội chứng dự kiến trên có thực sự phù hợp với tổ hợp triệu chứng của bệnh nhân hay không.
-        2. Loại bỏ các hội chứng mâu thuẫn nhau về mặt lâm sàng (ví dụ: Phong hàn là ngoại cảm cấp tính thường không đi kèm với các dấu hiệu nội nhân mãn tính/âm hư như lưỡi có vết nứt, trừ khi có bệnh cảnh đặc biệt phức tạp).
-        3. Chọn ra từ 1 đến tối đa 3 hội chứng chính xác nhất phản ánh đúng thực tế lâm sàng của tổ hợp triệu chứng.
-        4. Trả về kết quả dưới dạng danh sách tên các hội chứng được chọn, phân cách bằng dấu phẩy. Không giải thích gì thêm.
-        
-        Ví dụ đầu ra:
-        Âm hư, Tân dịch thương
+        Bệnh nhân có triệu chứng: {symptoms_str}. Các hội chứng dự kiến: {candidates_str}.
+        Hãy chọn ra từ 1 đến 3 hội chứng chính xác nhất và trả về dưới dạng danh sách ngăn cách bởi dấu phẩy. Không giải thích gì thêm.
         """
         try:
             import ollama
             response = ollama.chat(
                 model=self.qa_pipeline.llm_model,
-                messages=[
-                    {"role": "system", "content": "Bạn là chuyên gia chẩn đoán Đông y. Chỉ trả về danh sách hội chứng được chọn, phân cách bằng dấu phẩy, không giải thích gì thêm."},
-                    {"role": "user", "content": prompt}
-                ],
-                options={
-                    "temperature": 0.0,
-                    "seed": 42
-                }
+                messages=[{"role": "user", "content": prompt}],
+                options={"temperature": 0.0, "seed": 42}
             )
             ans = response['message']['content'].strip()
-            # Parse câu trả lời
             selected = [s.strip() for s in ans.replace("\n", ",").split(",") if s.strip()]
-            # Chỉ giữ các hội chứng thực sự nằm trong danh sách candidates ban đầu để tránh LLM bịa đặt
             valid_selected = [s for s in selected if any(s.lower() == cand.lower() for cand in candidate_syndromes)]
+            
             if valid_selected:
-                # Trả về theo đúng chữ hoa thường của candidates ban đầu
                 final = []
                 for v in valid_selected:
                     for cand in candidate_syndromes:
@@ -156,118 +116,99 @@ class TCMFusionPipeline:
                 return final
             return candidate_syndromes
         except Exception as e:
-            logger.error(f"Lỗi khi lọc hội chứng bằng LLM: {e}")
+            logger.error(f"Lỗi LLM filter: {e}")
             return candidate_syndromes
 
-    def _generate_explainable_answer(self, user_symptoms: str, detected_symptoms: list, final_syndromes: list, kg_context: str) -> str:
-        detected_symptoms_str = ", ".join(detected_symptoms) if detected_symptoms else "Không có"
-        syndromes_str = ", ".join(final_syndromes) if final_syndromes else "Không xác định rõ"
-        
-        # Bắt buộc LLM phải copy dữ liệu từ kg_context và không được thêm bất cứ điều gì khác.
-        # Bạn có thể thêm lệnh: "KHÔNG ĐƯỢC TỰ SUY DIỄN hoặc THÊM BẤT CỨ TỪ NGỮ, BỆNH, THUỐC NÀO MỚI. CHỈ DÙNG DỮ LIỆU TRONG KG_CONTEXT."
-        
-        prompt = f"""
-        Bạn là một bác sĩ Y học Cổ truyền trung thực, chính xác. Nhiệm vụ của bạn chỉ là giải thích cho bệnh nhân dựa trên dữ liệu có sẵn.
-        
-        DỮ LIỆU DUY NHẤT BẠN ĐƯỢC PHÉP SỬ DỤNG (TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA RA):
-        {kg_context}
-        
-        THÔNG TIN BỆNH NHÂN:
-        - Triệu chứng bệnh nhân tự mô tả: {user_symptoms if user_symptoms else "Không mô tả"}
-        - Triệu chứng phát hiện qua phân tích hình ảnh: {detected_symptoms_str}
-        
-        QUY TẮC BẮT BUỘC:
-        1. CHỈ DÙNG DỮ LIỆU TRONG PHẦN "DỮ LIỆU DUY NHẤT" Ở TRÊN.
-        2. TUYỆT ĐỐI KHÔNG TỰ SUY DIỄN, KHÔNG TỰ BỊA RA BỆNH LÝ MỚI, KHÔNG TỰ NGHĨ RA TÊN BỆNH HOẶC BÀI THUỐC MỚI (ví dụ: "Ho thực", "Phế Ho Đơn").
-        3. NẾU DỮ LIỆU TRONG KG_CONTEXT GHI "Chưa rõ" HOẶC CÓ BÀI THUỐC TRỐNG, BẠN PHẢI GHI RÕ "Hệ thống chưa có dữ liệu bài thuốc phù hợp."
-        4. CHỈ SỬ DỤNG ĐÚNG CÁC TÊN BỆNH, TÊN THUỐC, TÊN HỘI CHỨNG CÓ TRONG DỮ LIỆU.
-        
-        Hãy tạo câu trả lời từ dữ liệu trên:
+    def _generate_explainable_answer(self, user_symptoms: str, detected_symptoms: list, detailed_kg_data: list) -> str:
         """
-        try:
-            import ollama
-            response = ollama.chat(
-                model=self.qa_pipeline.llm_model,
-                messages=[
-                    {"role": "system", "content": "Bạn là chuyên gia Đông y. Chỉ được sử dụng dữ liệu có thật. Tuyệt đối không suy diễn."},
-                    {"role": "user", "content": prompt}
-                ],
-                options={
-                    "temperature": 0.0,  # Bắt buộc
-                    "seed": 42,
-                    "top_p": 1.0
-                }
-            )
-            return response['message']['content'].strip()
-        except Exception as e:
-            logger.error(f"Lỗi khi sinh câu trả lời giải thích bằng LLM: {e}")
-            return f"Chẩn đoán hội chứng: {syndromes_str}. Chưa thể sinh câu trả lời chi tiết do lỗi hệ thống."
+        [Giải pháp Chống Ảo Giác Tuyệt Đối]
+        Sử dụng Python để render cấu trúc thực thể (Tên bệnh, Bài thuốc) 100% từ Neo4j.
+        Chỉ gọi LLM Qwen để sinh đoạn văn giải thích cơ chế bệnh sinh.
+        """
+        final_markdown = "### 1. Kết luận chẩn đoán\n"
+        all_syndromes = [item["syndrome"] for item in detailed_kg_data]
+        final_markdown += f"Dựa trên phương pháp Tứ chẩn hợp tham, hệ thống chẩn đoán bệnh nhân có biểu hiện của hội chứng: **{', '.join(all_syndromes)}**.\n\n"
+        
+        final_markdown += "### 2. Biện chứng luận trị và Đồ thị tri thức\n"
+        
+        for data in detailed_kg_data:
+            syndrome = data["syndrome"]
+            matching = data["matching_symptoms"]
+            diseases = data["diseases"]
+            bai_thuoc = data["bai_thuoc"]
+            vi_thuoc = data["vi_thuoc"]
+            
+            final_markdown += f"#### Hội chứng: {syndrome}\n"
+            
+            # Chỉ dùng LLM để giải thích, CẤM kê đơn
+            prompt = f"""
+            Vai trò: Bác sĩ Đông y.
+            Bệnh nhân có hội chứng: '{syndrome}'. 
+            Các triệu chứng: {', '.join(matching) if matching else user_symptoms}.
+            Nhiệm vụ: Viết ĐÚNG 1 đoạn văn (3-4 câu) giải thích cơ chế y lý theo Âm Dương Ngũ Hành tại sao các triệu chứng trên lại gây ra hội chứng '{syndrome}'.
+            LỆNH CẤM THÉP: TUYỆT ĐỐI KHÔNG kê đơn thuốc, KHÔNG nhắc đến tên bài thuốc hay vị thuốc nào, KHÔNG đưa ra lời khuyên. CHỈ giải thích cơ chế.
+            """
+            try:
+                import ollama
+                response = ollama.chat(
+                    model=self.qa_pipeline.llm_model,
+                    messages=[{"role": "user", "content": prompt}],
+                    options={"temperature": 0.1, "seed": 42}
+                )
+                explanation = response['message']['content'].strip()
+            except Exception as e:
+                logger.error(f"Lỗi LLM giải thích: {e}")
+                explanation = "Không thể sinh lời giải thích y lý."
+                
+            final_markdown += f"- **Lý giải Y lý:** {explanation}\n"
+            
+            # Trích dẫn thực thể thẳng từ Neo4j bằng Python
+            if diseases:
+                final_markdown += f"- **Bệnh lý liên quan:** Nhóm bệnh **{', '.join(diseases)}** `(BenhLy)-[:CHIA_THÀNH]->(HoiChung)`\n"
+            
+            if bai_thuoc != "Chưa có dữ liệu":
+                final_markdown += f"- **Phương dược điều trị:** Bài thuốc **{bai_thuoc}** `(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`\n"
+                final_markdown += f"- **Thành phần vị thuốc:** Bao gồm **{vi_thuoc}** `(BaiThuoc)-[:BAO_GỒM]->(ViThuoc)`\n\n"
+            else:
+                final_markdown += f"- **Phương dược điều trị:** Hiện chưa có bài thuốc cập nhật cho hội chứng này trong hệ thống.\n\n"
+                
+        final_markdown += "### 3. Lời khuyên tổng quát\n"
+        final_markdown += "- Vui lòng nghỉ ngơi điều độ, ăn uống các thực phẩm dễ tiêu hóa và giữ tinh thần thoải mái. Theo dõi thêm triệu chứng để có hướng điều trị kịp thời."
+
+        return final_markdown
 
     def run_diagnosis(self, user_symptoms: str = "", face_img_path: str = None, tongue_img_path: str = None) -> dict:
-        """
-        Thực thi Tứ chẩn hợp tham: Kết hợp chữ viết và hình ảnh để chẩn đoán.
-        """
         vision_analysis_text = ""
         raw_vision_data = None
         vision_syndromes = []
 
-        # Bước 1: Xử lý Vọng chẩn (Nếu người dùng gửi ảnh)
         if face_img_path or tongue_img_path:
             logger.info("Bắt đầu phân tích hình ảnh qua LLaVA...")
             try:
-                # Gọi hàm run của pipeline thị giác
-                raw_vision_data = self.vision_pipeline.run(
-                    tongue_image_path=tongue_img_path, 
-                    face_image_path=face_img_path
-                )
-                
-                # Trích xuất chuỗi mô tả từ kết quả trả về
+                raw_vision_data = self.vision_pipeline.run(tongue_image_path=tongue_img_path, face_image_path=face_img_path)
                 if raw_vision_data and isinstance(raw_vision_data, dict):
                     vision_analysis_text = raw_vision_data.get("analysis", "")
-                elif isinstance(raw_vision_data, str):
-                    vision_analysis_text = raw_vision_data
-                else:
-                    vision_analysis_text = str(raw_vision_data)
             except Exception as e:
                 logger.error(f"Lỗi module Vision: {e}")
 
         if raw_vision_data and isinstance(raw_vision_data, dict):
             vision_syndromes = raw_vision_data.get("syndromes", raw_vision_data.get("possible_syndromes", []))
-        else:
-            vision_syndromes = []
 
-        # Bước 2: Xử lý triệu chứng từ văn bản (Vấn chẩn)
         text_syndromes = self._extract_syndromes_from_text(user_symptoms) if user_symptoms else []
 
-        # Bước 3: Tổng hợp Logic
-        # 1. Nếu cả văn bản và ảnh đều có, lấy giao của các hội chứng
         final_syndromes = []
         if text_syndromes and vision_syndromes:
             final_syndromes = list(set(text_syndromes) & set(vision_syndromes))
-        
-        # 2. Nếu chỉ có văn bản, lấy hội chứng từ văn bản
         elif text_syndromes:
             final_syndromes = text_syndromes
-        
-        # 3. Nếu chỉ có ảnh, lấy hội chứng từ ảnh
         elif vision_syndromes:
             final_syndromes = vision_syndromes
-        
-        # 4. Nếu không có từ nguồn nào, kết thúc
-        else:
-            pass
 
-        # Tổ hợp chuỗi triệu chứng gộp để tìm kiếm/fallback
         combined_query = user_symptoms.strip()
         if vision_analysis_text:
-            if combined_query:
-                combined_query = f"{combined_query}, {vision_analysis_text}"
-            else:
-                combined_query = vision_analysis_text
+            combined_query = f"{combined_query}, {vision_analysis_text}" if combined_query else vision_analysis_text
 
-        # Fallback nếu không xác định được trực tiếp từ mapping: chạy QA RAG truy vấn đồ thị để lấy hội chứng
         if not final_syndromes and combined_query:
-            logger.info(f"Không xác định được hội chứng trực tiếp, chạy truy vấn đồ thị qua QA để trích xuất hội chứng...")
             try:
                 qa_res = self.qa_pipeline.execute_and_answer(combined_query)
                 extracted_syndromes = []
@@ -278,29 +219,20 @@ class TCMFusionPipeline:
                                 extracted_syndromes.append(v)
                 if extracted_syndromes:
                     final_syndromes = list(set(extracted_syndromes))
-                    logger.info(f"Trích xuất thành công {len(final_syndromes)} hội chứng từ đồ thị: {final_syndromes}")
             except Exception as e:
-                logger.error(f"Lỗi khi chạy truy vấn fallback lấy hội chứng: {e}")
+                logger.error(f"Lỗi truy vấn fallback: {e}")
 
-        # Lọc lâm sàng bằng LLM để loại bỏ hội chứng không phù hợp hoặc mâu thuẫn
         if len(final_syndromes) > 1:
             symptoms_list = []
-            if user_symptoms:
-                symptoms_list.append(user_symptoms)
+            if user_symptoms: symptoms_list.append(user_symptoms)
             if raw_vision_data and isinstance(raw_vision_data, dict):
-                detected = raw_vision_data.get("detected_symptoms", [])
-                symptoms_list.extend(detected)
-            
+                symptoms_list.extend(raw_vision_data.get("detected_symptoms", []))
             if symptoms_list:
-                logger.info(f"Đang lọc lâm sàng cho các hội chứng {final_syndromes} với triệu chứng {symptoms_list}...")
                 final_syndromes = self._filter_syndromes_with_llm(symptoms_list, final_syndromes)
 
-        # Bước 4: Tạo câu trả lời tự nhiên có giải thích (Explainable Generation)
         qa_result = None
         if final_syndromes:
-            # 1. Đọc lại toàn bộ file mapping để phục vụ đối chiếu triệu chứng khớp
-            import json
-            import os
+            import json, os
             all_mappings = {}
             for filename in ["symptom_to_syndrome.json", "face_to_syndrome.json"]:
                 path = os.path.join("data", "mapping", filename)
@@ -308,108 +240,76 @@ class TCMFusionPipeline:
                     try:
                         with open(path, "r", encoding="utf-8") as f:
                             all_mappings.update(json.load(f))
-                    except Exception as e:
-                        logger.error(f"Lỗi đọc {filename} để đối chiếu: {e}")
+                    except Exception as e: pass
 
-            # Danh sách toàn bộ triệu chứng thực tế của bệnh nhân
             patient_symptoms = []
-            if user_symptoms:
-                patient_symptoms.extend([s.strip() for s in user_symptoms.split(",") if s.strip()])
+            if user_symptoms: patient_symptoms.extend([s.strip() for s in user_symptoms.split(",") if s.strip()])
             if raw_vision_data and isinstance(raw_vision_data, dict):
-                detected = raw_vision_data.get("detected_symptoms", [])
-                patient_symptoms.extend(detected)
+                patient_symptoms.extend(raw_vision_data.get("detected_symptoms", []))
             patient_symptoms = list(set([s for s in patient_symptoms if s]))
 
-            # 2. Truy xuất thông tin từ đồ thị tri thức (Neo4j) cho các hội chứng đã chọn
-            kg_context_lines = []
             treatments = []
-            
+            detailed_kg_data = [] 
+
             for syndrome in final_syndromes:
-                # Tìm các triệu chứng của bệnh nhân thực sự tương thích với hội chứng này
                 matching_patient_symptoms = []
                 for s in patient_symptoms:
                     mapped_syndromes = all_mappings.get(s, [])
                     if syndrome in mapped_syndromes or any(syndrome.lower() == ms.lower() for ms in mapped_syndromes):
                         matching_patient_symptoms.append(s)
-                        continue
-                    try:
-                        db_symptoms = self.qa_pipeline.neo4j_client.get_symptoms_by_syndrome(syndrome)
-                        if any(s.lower() in ds.lower() or ds.lower() in s.lower() for ds in db_symptoms):
-                            matching_patient_symptoms.append(s)
-                    except Exception as e:
-                        logger.error(f"Lỗi kiểm tra Neo4j matching symptoms: {e}")
-                
-                matching_patient_symptoms = list(set(matching_patient_symptoms))
                 
                 try:
                     diseases = self.qa_pipeline.neo4j_client.get_diseases_by_syndrome(syndrome)
-                    db_symptoms = self.qa_pipeline.neo4j_client.get_symptoms_by_syndrome(syndrome)
                     treatment = self.qa_pipeline.neo4j_client.get_treatment_by_syndrome(syndrome)
                     
-                    diseases_str = ", ".join(diseases) if diseases else "Chưa rõ"
-                    db_symptoms_str = ", ".join(db_symptoms) if db_symptoms else "Chưa rõ"
-                    matching_str = ", ".join(matching_patient_symptoms) if matching_patient_symptoms else "Không có triệu chứng khớp trực tiếp (suy luận từ bệnh cảnh)"
-                    
-                    kg_context_lines.append(f"--- Hội chứng: {syndrome} ---")
-                    kg_context_lines.append(f"- Triệu chứng CỦA BỆNH NHÂN khớp với hội chứng này: {matching_str}")
-                    kg_context_lines.append(f"- Bệnh lý liên quan (Path: BenhLy -> CHIA_THÀNH -> HoiChung): {diseases_str}")
-                    kg_context_lines.append(f"- Triệu chứng biểu hiện lý thuyết trong database (Path: HoiChung -> CÓ_BIỂU_HIỆN -> TrieuChung): {db_symptoms_str}")
+                    bai_thuoc = "Chưa có dữ liệu"
+                    vi_thuoc = "Chưa có dữ liệu"
                     
                     if treatment:
                         treatments.append(treatment)
-                        bai_thuoc = treatment.get("bai_thuoc", "Chưa rõ")
-                        vi_thuoc = ", ".join(treatment.get("vi_thuoc", [])) if treatment.get("vi_thuoc") else "Chưa rõ"
-                        kg_context_lines.append(f"- Bài thuốc điều trị (Path: HoiChung -> ĐƯỢC_ĐIỀU_TRỊ_BẰNG -> BaiThuoc): {bai_thuoc}")
-                        kg_context_lines.append(f"- Các vị thuốc trong bài (Path: BaiThuoc -> BAO_GỒM -> ViThuoc): {vi_thuoc}")
-                    else:
-                        kg_context_lines.append(f"- Bài thuốc điều trị: Chưa có bài thuốc phù hợp trong hệ thống.")
-                except Exception as e:
-                    logger.error(f"Lỗi khi truy xuất dữ liệu Neo4j cho hội chứng {syndrome}: {e}")
+                        bai_thuoc = treatment.get("bai_thuoc", "Chưa có dữ liệu")
+                        vi_thuoc = ", ".join(treatment.get("vi_thuoc", [])) if treatment.get("vi_thuoc") else "Chưa có dữ liệu"
 
-            kg_context_str = "\n".join(kg_context_lines)
-            
-            # 3. Sử dụng LLM để sinh câu trả lời giải thích biện chứng luận trị và chỉ ra đường đi đồ thị
-            detected_symptoms = []
-            if raw_vision_data and isinstance(raw_vision_data, dict):
-                detected_symptoms = raw_vision_data.get("detected_symptoms", [])
-                
-            # ---------------------------------------------------------
-            # THÊM CHỐT CHẶN ẢO GIÁC LLM (ANTI-HALLUCINATION BLOCK)
-            # ---------------------------------------------------------
+                    detailed_kg_data.append({
+                        "syndrome": syndrome,
+                        "matching_symptoms": matching_patient_symptoms,
+                        "diseases": diseases,
+                        "bai_thuoc": bai_thuoc,
+                        "vi_thuoc": vi_thuoc
+                    })
+                except Exception as e:
+                    logger.error(f"Lỗi truy xuất dữ liệu: {e}")
+                    
+            # CHỐT CHẶN ẢO GIÁC TUYỆT ĐỐI BẰNG PYTHON
             if not treatments:
-                logger.warning(f"ĐÃ CHẶN ẢO GIÁC: Neo4j không có bài thuốc cho {final_syndromes}")
+                logger.warning(f"Neo4j không có bài thuốc cho {final_syndromes}")
                 explainable_answer = (
-                    f"### Kết luận chẩn đoán sơ bộ\n"
-                    f"Hệ thống nhận diện dấu hiệu liên quan đến: **{', '.join(final_syndromes) if final_syndromes else 'Chưa rõ'}**.\n\n"
-                    f"### Biện chứng & Phương dược\n"
-                    f"Hiện tại, trong Cơ sở dữ liệu Đồ thị Tri thức (Neo4j) của hệ thống **KHÔNG CÓ** bài thuốc và vị thuốc chuẩn xác cho trường hợp này.\n\n"
-                    f"> ⚠️ **Lưu ý an toàn Y tế:** Để tránh hiện tượng AI tự suy diễn (Hallucination) và kê đơn sai lệch, hệ thống xin phép không đưa ra phương dược điều trị tự động. \n\n"
-                    f"**Lời khuyên:** Vui lòng mô tả lại triệu chứng của bạn bằng các từ khóa rõ ràng hơn (Ví dụ: thay vì *'ho liên tục'*, hãy ghi *'ho khan'*, *'ho có đờm vàng'*...) để hệ thống truy xuất chính xác."
+                    f"### 1. Kết luận chẩn đoán sơ bộ\n"
+                    f"Hệ thống nhận diện dấu hiệu liên quan đến hội chứng: **{', '.join(final_syndromes) if final_syndromes else 'Chưa rõ'}**.\n\n"
+                    f"### 2. Phương dược điều trị\n"
+                    f"Hiện tại, cơ sở dữ liệu Đồ thị Tri thức (Neo4j) **KHÔNG CÓ** bài thuốc tương ứng cho hội chứng này.\n\n"
+                    f"> ⚠️ *Hệ thống đã tự động khóa mô hình AI sinh đơn thuốc để đảm bảo an toàn y tế, triệt tiêu hoàn toàn rủi ro AI tự bịa thuốc (Hallucination).* \n\n"
+                    f"Vui lòng thử mô tả triệu chứng bằng các từ khóa khác."
                 )
             else:
-                # Nếu CÓ bài thuốc thật từ Neo4j thì mới cho phép LLM giải thích
-                logger.info("Đang sinh câu trả lời giải thích biện chứng luận trị bằng LLM...")
+                detected_symptoms = raw_vision_data.get("detected_symptoms", []) if raw_vision_data and isinstance(raw_vision_data, dict) else []
                 explainable_answer = self._generate_explainable_answer(
                     user_symptoms=user_symptoms,
                     detected_symptoms=detected_symptoms,
-                    final_syndromes=final_syndromes,
-                    kg_context=kg_context_str
+                    detailed_kg_data=detailed_kg_data
                 )
-            # ---------------------------------------------------------
-            
+                
             qa_result = {
                 "answer": explainable_answer,
                 "data": treatments,
                 "syndromes": final_syndromes
             }
         else:
-            # Fallback nếu hoàn toàn không tìm thấy hội chứng
             qa_result = {
                 "answer": "Hệ thống chưa tìm thấy bệnh lý hoặc hội chứng phù hợp với tổ hợp triệu chứng của bạn.",
                 "data": []
             }
 
-        # Bước 5: Đóng gói kết quả trả về
         return {
             "source": "Tứ chẩn hợp tham (Fusion)",
             "input_fusion": combined_query,
@@ -417,12 +317,7 @@ class TCMFusionPipeline:
             "diagnosis_result": qa_result
         }
 
-
     def close(self):
-        """Giải phóng tài nguyên khi tắt hệ thống"""
-        if hasattr(self, 'qa_pipeline'):
-            self.qa_pipeline.close()
-        # Nếu TCMTonguePipeline có hàm close, hãy gọi nó ở đây
-        if hasattr(self, 'vision_pipeline') and hasattr(self.vision_pipeline, 'close'):
-            self.vision_pipeline.close()
+        if hasattr(self, 'qa_pipeline'): self.qa_pipeline.close()
+        if hasattr(self, 'vision_pipeline') and hasattr(self.vision_pipeline, 'close'): self.vision_pipeline.close()
         logger.info("Đã giải phóng tài nguyên.")
