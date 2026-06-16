@@ -22,21 +22,38 @@ class TCMFusionPipeline:
         logger.info("Khởi tạo hoàn tất!")
 
     def _extract_syndromes_from_text(self, text: str) -> list:
-        """Trích xuất hội chứng bằng cách query trực tiếp Neo4j, đảm bảo không trượt dữ liệu"""
+        """Trích xuất hội chứng bằng cách nhờ LLM lọc từ khóa y khoa rồi mới query Neo4j"""
         if not text:
             return []
         syndromes = []
         try:
-            # 1. Bóc tách từ khóa (VD: "tôi bị đau đầu" -> "đau đầu")
-            terms = self.qa_pipeline._preprocess_question(text)
-            if not terms:
-                return []
+            # 1. Nhờ LLM đóng vai trò màng lọc nhiễu (Bỏ các từ: liên tục, quá, bị, tôi...)
+            prompt = f"""
+            Câu của bệnh nhân: "{text}"
+            Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA thực sự (ví dụ: ho, sốt, đau đầu, nôn mửa, chóng mặt).
+            TUYỆT ĐỐI LOẠI BỎ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
+            Chỉ trả về danh sách các từ khóa cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
+            """
+            import ollama
+            res = ollama.chat(
+                model=self.qa_pipeline.llm_model,
+                messages=[{"role": "user", "content": prompt}],
+                options={"temperature": 0.0, "seed": 42}
+            )
+            keywords_str = res['message']['content'].strip()
             
-            # 2. Quét trực tiếp Database bằng Cypher tĩnh (Không qua LLM)
-            for term in terms:
+            # Xóa bỏ các ký tự thừa nếu LLM lỡ sinh ra
+            keywords_str = keywords_str.replace('"', '').replace("'", "").replace(".", "")
+            
+            # Tách thành mảng các từ khóa sạch
+            keywords = [k.strip().lower() for k in keywords_str.split(',') if len(k.strip()) >= 2]
+            logger.info(f"Từ khóa y khoa đã lọc sạch nhiễu: {keywords}")
+            
+            # 2. Quét trực tiếp Database với các từ khóa chuẩn xác
+            for kw in keywords:
                 cypher = f"""
                 MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung) 
-                WHERE toLower(t.name) CONTAINS '{term.lower()}' 
+                WHERE toLower(t.name) CONTAINS '{kw}' 
                 RETURN DISTINCT h.name
                 """
                 records = self.qa_pipeline.run_cypher(cypher)
@@ -46,7 +63,7 @@ class TCMFusionPipeline:
                         
             return list(set(syndromes))
         except Exception as e:
-            logger.error(f"Lỗi khi trích xuất hội chứng trực tiếp từ Neo4j: {e}")
+            logger.error(f"Lỗi khi trích xuất hội chứng: {e}")
             return []
 
     def _get_face_tongue_symptoms_for_syndrome(self, syndrome: str) -> dict:
