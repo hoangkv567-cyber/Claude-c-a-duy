@@ -78,18 +78,26 @@ class TCMQA:
         # Sử dụng thuật toán khớp triệu chứng trực tiếp từ database (Longest Match First)
         return self._extract_symptoms_by_matching(question)
 
-    def text_to_cypher(self, user_question: str) -> str:
+    def text_to_cypher(self, user_question: str, terms: list = None) -> str:
+        if terms is None:
+            terms = self._preprocess_question(user_question)
+        if not terms:
+            return ""
+            
+        symptoms_str = ", ".join([f"'{t}'" for t in terms])
+        
         prompt = f"""
         You are an expert Neo4j Cypher developer for a Traditional Chinese Medicine database.
         Schema:
         {self.db_schema}
         
         CRITICAL RULES FOR CYPHER GENERATION:
-        1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms. Each symptom MUST contain at least 2 words (e.g., 'ho khan', 'ho đờm', 'đau đầu'). Ignore words like tôi, bị, liên tục...
+        1. USE THE PROVIDED SYMPTOMS ONLY: Generate the Cypher query using exactly the following medical symptoms extracted from the user's question: {symptoms_str}.
+           Do NOT extract, change, or add any other symptoms.
         
-        2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs (where 'ho' falsely matches 'choáng'). You MUST use Regex word boundaries `\\\\b`.
+        2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs. You MUST use Regex word boundaries `\\\\b`.
            Syntax: WHERE toLower(t.name) =~ '.*\\\\bkeyword\\\\b.*' (keyword must be in lowercase, e.g., 'ho khan' instead of 'Ho khan')
-           Example: WHERE toLower(t.name) =~ '.*\\\\bho\\\\b.*'
+           Example: For symptom 'ho liên tục', use: WHERE toLower(t.name) =~ '.*\\\\bho liên tục\\\\b.*'
         
         3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS):
            MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
@@ -99,9 +107,9 @@ class TCMQA:
            RETURN DISTINCT b.name, h.name, p.name
         
         4. FOR MULTIPLE SYMPTOMS: Use multiple MATCH clauses.
-           Example:
-           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*\\\\bho\\\\b.*'
-           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*\\\\bsốt\\\\b.*'
+           Example for symptoms 'ho khan' and 'đau đầu':
+           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*\\\\bho khan\\\\b.*'
+           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*\\\\bđau đầu\\\\b.*'
            OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
            OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
            RETURN DISTINCT b.name, h.name, p.name
@@ -183,7 +191,7 @@ class TCMQA:
             }
         
         # Bước 2: Sinh Cypher
-        cypher_query = self.text_to_cypher(user_question)
+        cypher_query = self.text_to_cypher(user_question, terms=terms)
         if not cypher_query:
             return {
                 "question": user_question,
