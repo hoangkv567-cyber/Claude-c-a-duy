@@ -183,6 +183,10 @@ class TCMFusionPipeline:
            - "Hội chứng [Tên hội chứng] thuộc nhóm bệnh [Tên bệnh lý] qua quan hệ `(BenhLy)-[:CHIA_THÀNH]->(HoiChung)`"
            - "Điều trị hội chứng này bằng bài thuốc [Tên bài thuốc] qua quan hệ `(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`"
            - "Bài thuốc [Tên bài thuốc] gồm các vị thuốc như [Tên vị thuốc] qua quan hệ `(BaiThuoc)-[:BAO_GỒM]->(ViThuoc)`"
+        3. **TUYỆT ĐỐI KHÔNG TỰ BỊA (NẰM LÒNG QUY TẮC CHỐNG ẢO GIÁC)**:
+           - Bạn CHỈ ĐƯỢC phép sử dụng bài thuốc, các vị thuốc và bệnh lý có trong phần "DỮ LIỆU TRUY XUẤT TỪ ĐỒ THỊ TRI THỨC" được cung cấp ở trên.
+           - TUYỆT ĐỐI KHÔNG tự bịa ra bất cứ tên bài thuốc mới, vị thuốc mới nào ngoài dữ liệu được cung cấp (ví dụ: cấm tự nghĩ ra tên bài thuốc như "Phế Hư Ho Khang", "Bài Thuốc Ho Khí Hư" hay vị thuốc không có thực như "Ngưu Phong").
+           - Nếu phần dữ liệu truy xuất ghi "Chưa rõ" hoặc không trả về bài thuốc/vị thuốc tương ứng cho hội chứng, hãy thông báo rõ: "Hệ thống chưa có dữ liệu bài thuốc phù hợp cho hội chứng này trong cơ sở dữ liệu". Không tự ý kê đơn thuốc bịa.
         
         CẤU TRÚC CHI TIẾT CÂU TRẢ LỜI:
         1. **Kết luận chẩn đoán**: Đưa ra kết luận rõ ràng về hội chứng bệnh lý của bệnh nhân.
@@ -198,7 +202,7 @@ class TCMFusionPipeline:
             response = ollama.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là chuyên gia Đông y chẩn đoán chính xác tuyệt đối theo đồ thị tri thức, không suy diễn lệch pha, sử dụng quan hệ BAO_GỒM."},
+                    {"role": "system", "content": "Bạn là chuyên gia Đông y chẩn đoán chính xác tuyệt đối theo đồ thị tri thức, không suy diễn lệch pha, sử dụng quan hệ BAO_GỒM. Chỉ sử dụng thông tin từ dữ liệu đồ thị tri thức được cung cấp, tuyệt đối không tự ý bịa bài thuốc hay vị thuốc khác."},
                     {"role": "user", "content": prompt}
                 ],
                 options={
