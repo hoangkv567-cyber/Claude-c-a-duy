@@ -165,7 +165,6 @@ class TCMQA:
         return filtered_or
 
     def execute_and_answer(self, user_question: str) -> dict:
-        """Chạy dịch câu hỏi, thực thi truy vấn Cypher và đóng gói câu trả lời tự nhiên"""
         # Bước 1: Tiền xử lý câu hỏi
         terms = self._preprocess_question(user_question)
         if not terms:
@@ -196,49 +195,71 @@ class TCMQA:
                     "data": []
                 }
             
-            # Bước 4: Lọc kết quả
-            filtered_records = self._filter_results(records, terms)
-            if not filtered_records:
-                # Fallback: nếu không có kết quả sau lọc, dùng kết quả gốc
-                logger.warning("Không tìm thấy kết quả khớp từ khóa, sử dụng kết quả gốc")
-                filtered_records = records
+            # Bước 4: Lọc kết quả bằng logic ưu tiên
+            # Nhóm các bệnh theo tên
+            disease_map = {}
+            for record in records:
+                disease = record.get("b.name", "")
+                if not disease:
+                    continue
+                if disease not in disease_map:
+                    disease_map[disease] = []
+                disease_map[disease].append(record)
             
-            # Bước 5: Tự động đóng gói câu trả lời tự nhiên (NLG)
-            danh_sach_benh = list(dict.fromkeys([record.get("b.name") for record in filtered_records if record.get("b.name")]))
-            danh_sach_thuoc = list(dict.fromkeys([record.get("p.name") for record in filtered_records if record.get("p.name")]))
-            danh_sach_hoi_chung = list(dict.fromkeys([record.get("h.name") for record in filtered_records if record.get("h.name")]))
-
+            # Tính điểm ưu tiên cho mỗi bệnh dựa trên số lượng hội chứng và bài thuốc
+            scored_diseases = []
+            for disease, records_list in disease_map.items():
+                # Đếm số lượng hội chứng và bài thuốc duy nhất
+                syndromes = set()
+                prescriptions = set()
+                for record in records_list:
+                    if record.get("h.name"):
+                        syndromes.add(record.get("h.name"))
+                    if record.get("p.name"):
+                        prescriptions.add(record.get("p.name"))
+                
+                score = len(syndromes) + len(prescriptions)
+                scored_diseases.append({
+                    "disease": disease,
+                    "score": score,
+                    "records": records_list,
+                    "syndromes": list(syndromes),
+                    "prescriptions": list(prescriptions)
+                })
+            
+            # Sắp xếp theo điểm giảm dần
+            scored_diseases.sort(key=lambda x: x["score"], reverse=True)
+            
+            # Chỉ lấy top 10 kết quả tốt nhất
+            top_diseases = scored_diseases[:10]
+            
+            # Bước 5: Đóng gói câu trả lời tự nhiên (NLG)
             cau_tra_loi_parts = []
             
-            if danh_sach_benh:
+            if top_diseases:
+                danh_sach_benh = [d["disease"] for d in top_diseases]
                 gioi_han = danh_sach_benh[:5]
-                text = f"Bệnh lý liên quan: {', '.join(gioi_han)}"
-                if len(danh_sach_benh) > 5: text += f" (và {len(danh_sach_benh) - 5} bệnh khác)"
+                text = f"Bệnh lý liên quan (ưu tiên theo độ khớp): {', '.join(gioi_han)}"
+                if len(danh_sach_benh) > 5:
+                    text += f" (và {len(danh_sach_benh) - 5} bệnh khác)"
                 cau_tra_loi_parts.append(text)
                 
-            if danh_sach_hoi_chung:
-                gioi_han = danh_sach_hoi_chung[:5]
-                text = f"Hội chứng: {', '.join(gioi_han)}"
-                if len(danh_sach_hoi_chung) > 5: text += f" (và {len(danh_sach_hoi_chung) - 5} hội chứng khác)"
-                cau_tra_loi_parts.append(text)
-
-            if danh_sach_thuoc:
-                gioi_han = danh_sach_thuoc[:5]
-                text = f"Bài thuốc điều trị: {', '.join(gioi_han)}"
-                if len(danh_sach_thuoc) > 5: text += f" (và {len(danh_sach_thuoc) - 5} bài khác)"
-                cau_tra_loi_parts.append(text)
-
-            # Gộp các câu trả lời lại
+                # Lấy bài thuốc cho bệnh có điểm cao nhất
+                best_disease = top_diseases[0]
+                if best_disease.get("prescriptions"):
+                    text = f"Bài thuốc ưu tiên cho bệnh '{best_disease['disease']}': {', '.join(best_disease['prescriptions'])}"
+                    cau_tra_loi_parts.append(text)
+            
             if cau_tra_loi_parts:
                 cau_tra_loi = "Dựa trên thông tin của bạn. " + " | ".join(cau_tra_loi_parts) + "."
             else:
                 cau_tra_loi = "Hệ thống chưa tìm thấy thông tin phù hợp với truy vấn này."
-
+            
             return {
                 "question": user_question,
                 "cypher_used": cypher_query,
                 "answer": cau_tra_loi,
-                "data": filtered_records
+                "data": records
             }
             
         except Exception as e:
