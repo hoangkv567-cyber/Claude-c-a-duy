@@ -88,7 +88,7 @@ class TCMQA:
         1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms. Each symptom MUST contain at least 2 words (e.g., 'ho khan', 'ho đờm', 'đau đầu'). Ignore words like tôi, bị, liên tục...
         
         2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs (where 'ho' falsely matches 'choáng'). You MUST use Regex word boundaries `\\\\b`.
-           Syntax: WHERE toLower(t.name) =~ '.*\\\\bkeyword\\\\b.*'
+           Syntax: WHERE toLower(t.name) =~ '.*\\\\bkeyword\\\\b.*' (keyword must be in lowercase, e.g., 'ho khan' instead of 'Ho khan')
            Example: WHERE toLower(t.name) =~ '.*\\\\bho\\\\b.*'
         
         3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS):
@@ -156,7 +156,7 @@ class TCMQA:
         for record in records:
             record_text = " ".join([str(val) for val in record.values()]).lower()
             # Dùng regex \b để bắt buộc từ khóa phải đứng độc lập (vd: \bho\b không match choáng)
-            if all(re.search(rf'\b{re.escape(term)}\b', record_text) for term in terms):
+            if all(re.search(rf'\b{re.escape(term.lower())}\b', record_text) for term in terms):
                 filtered_and.append(record)
         
         if filtered_and:
@@ -167,7 +167,7 @@ class TCMQA:
         filtered_or = []
         for record in records:
             record_text = " ".join([str(val) for val in record.values()]).lower()
-            if any(re.search(rf'\b{re.escape(term)}\b', record_text) for term in terms):
+            if any(re.search(rf'\b{re.escape(term.lower())}\b', record_text) for term in terms):
                 filtered_or.append(record)
         
         return filtered_or
