@@ -239,6 +239,75 @@ class TCMFusionPipeline:
             if symptoms_list:
                 final_syndromes = self._filter_syndromes_with_llm(symptoms_list, final_syndromes)
 
+        # === BẮT ĐẦU CHẶN KẾT QUẢ KHÔNG HỢP LỆ ===
+        # Danh sách các hội chứng hợp lệ (bạn đã có trong prompts.py, copy vào đây)
+        VALID_SYNDROMES = [
+            "Can Thận hư khuy", "Can dương huyết ứ", "Can dương hóa phong", "Can dương thượng kháng", 
+            "Can huyết bất túc", "Can hỏa", "Can hỏa cuồng động", "Can hỏa nhiễu tâm", "Can hỏa phạm phế", 
+            "Can hỏa thượng viêm", "Can khí phạm vị", "Can khí uất kết", "Can khí uất trệ", "Can thận hư", 
+            "Can thận khuy hư", "Can thận âm hư", "Can uất", "Can uất huyết ứ", "Can uất hóa hỏa", 
+            "Can uất hỏa", "Can uất hỏa uất", "Can uất hỏa vượng", "Can uất khí trệ", "Can đảm hỏa thịnh", 
+            "Can đảm thấp nhiệt", "Cơ ho dữ dội", "Dinh phận chứng", "Dương hoàng - Nhiệt trọng", 
+            "Dương hoàng - Thấp trọng", "Dương hư bí", "Dịch độc lị", "Gan thận âm hư", "Hoàng đản", 
+            "Huyết hàn", "Huyết hư", "Huyết hư bí", "Huyết hư phong táo", "Huyết khô", "Huyết lâm", 
+            "Huyết nhiệt", "Huyết nhiệt vọng hành", "Huyết nhiệt ứ", "Huyết phận chứng", "Huyết ứ", 
+            "Huyết ứ mạch lạc", "Huyết ứ nội kết", "Huyết ứ trở lạc", "Hàn hoắc loạn", "Hàn ngưng", 
+            "Hàn ngưng mạch lạc", "Hàn ngưng tâm mạch", "Hàn ngưng uất kết", "Hàn sán", "Hàn thấp", 
+            "Hàn thấp lị", "Hàn thấp nội thịnh", "Hàn thấp trở lạc", "Hàn thấp uất kết", "Hàn thấp úc kết", 
+            "Hàn tà khách vị", "Hành tý (Phong tý)", "Hư bổn lị", "Hư hỏa", "Khí bí", "Khí bất nhiếp huyết", 
+            "Khí dương bạo thoát", "Khí huyết câu hư", "Khí huyết hư", "Khí huyết khuy hư", "Khí huyết lưỡng hư", 
+            "Khí hư", "Khí hư bí", "Khí hư huyết ứ", "Khí lâm", "Khí phận chứng", "Khí trệ", "Khí trệ hung", 
+            "Khí trệ huyết ứ", "Khí trệ thấp trở", "Khí trệ tâm hung", "Khí trệ uất kết", "Khí uất hóa hỏa", 
+            "Khí âm lưỡng hư", "Khởi phát", "Kinh lạc - Khí hư huyết ứ", "Kinh lạc - Phong đàm", "Lao lâm", 
+            "Loét mủ", "Mệnh môn hỏa suy", "Ngoại tà phạm vị", "Nhiệt bí", "Nhiệt hoắc loạn", "Nhiệt lâm", 
+            "Nhiệt thấp", "Nhiệt thịnh", "Nhiệt tý", "Nhiệt độc thịnh", "Nhiệt độc uất kết", "Nhiệt độc xí thịnh", 
+            "Phong dương nội động", "Phong hàn", "Phong hàn phạm phế", "Phong hàn thấp", "Phong hàn trở lạc", 
+            "Phong hỏa thịnh", "Phong nhiệt", "Phong nhiệt huyết táo", "Phong nhiệt phạm phế", "Phong nhiệt thấp", 
+            "Phong nhiệt thịnh", "Phong nhiệt trở lạc", "Phong thấp", "Phong thấp nhiệt", "Phong thấp trở lạc", 
+            "Phong thủy tướng bác", "Phong tà trúng lạc", "Phong táo thương phế", "Phong đàm bế khiếu", 
+            "Phong đàm nội nhiễu", "Phong đàm trở lạc", "Phế khí hư", "Phế nhiệt", "Phế nhiệt di tân", 
+            "Phế nhiệt thịnh", "Phế nhiệt tân thương", "Phế nhiệt uất kết", "Phế phế khí hư", "Phế vệ bất cố", 
+            "Phế vị nhiệt thịnh", "Phế âm hư", "Thành mủ", "Thạch lâm", "Thấp hàn", "Thấp nhiệt", 
+            "Thấp nhiệt bọc mủ", "Thấp nhiệt hạ chú", "Thấp nhiệt lị", "Thấp nhiệt sán", "Thấp nhiệt trở lạc", 
+            "Thấp nhiệt tẩm dâm", "Thấp nhiệt uẩn kết", "Thấp nhiệt uẩn phế", "Thấp trệ", "Thấp trọng", 
+            "Thấp trở", "Thấp độc tẩm dâm", "Thận bất nạp khí", "Thận dương hư", "Thận hư", "Thận hư bất cố", 
+            "Thận hư tinh khuy", "Thận hư đàm thấp", "Thận khí hư", "Thận tinh bất túc", "Thận tinh hư", 
+            "Thận âm bất túc", "Thận âm hư", "Thận âm hư hoả vượng", "Thận âm khuy hư", "Thống tý (Hàn tý)", 
+            "Thời kỳ sởi bay", "Thời kỳ sởi mọc", "Thủy thấp nội đình", "Thủy thấp tẩm trướng", "Thử thấp", 
+            "Thực trệ", "Thực trệ tràng vị", "Thực trệ uất kết", "Thực trệ uẩn kết", "Thực trệ ứ", 
+            "Thực độc trúng", "Trùng tích", "Tr착 tý (Thấp tý)", "Táo nhiệt thương phế", "Tâm dương bạo thoát", 
+            "Tâm dương bất chấn", "Tâm dương hư", "Tâm huyết bất túc", "Tâm huyết ứ trở", "Tâm hỏa", 
+            "Tâm hỏa thượng viêm", "Tâm hỏa thịnh", "Tâm khí bất túc", "Tâm khí dương suy", "Tâm khí hư", 
+            "Tâm thần thất dưỡng", "Tâm thận bất giao", "Tâm thận khuy hư", "Tâm tỳ hư", "Tâm tỳ khuy hư", 
+            "Tâm tỳ lưỡng hư", "Tâm đởm khí hư", "Tân dịch thương", "Tạng phủ - Bế chứng", "Tạng phủ - Thoát chứng", 
+            "Tỳ dương hư", "Tỳ hư thấp trọng", "Tỳ khí hư", "Tỳ thận dương hư", "Tỳ thận hư", "Tỳ thận khí hư", 
+            "Tỳ vị hư", "Tỳ vị hư hàn", "Tỳ vị hư nhược", "Tỳ vị hư đàm thấp", "Tỳ vị khí hư", "Tỳ vị thấp nhiệt", 
+            "Vệ phận chứng", "Vị hàn", "Vị hỏa thượng viêm", "Vị nhiệt", "Vị nhiệt xí thịnh", "Vị âm bất túc", 
+            "Vị âm hư", "Âm dương lưỡng hư", "Âm hoàng", "Âm hư", "Âm hư dương kháng", "Âm hư hỏa uất", 
+            "Âm hư hỏa vượng", "Âm hư nội nhiệt", "Đàm hỏa bế khiếu", "Đàm hỏa nhiễu tâm", "Đàm hỏa nội nhiễu", 
+            "Đàm hỏa thượng nhiễu", "Đàm khí giao trở", "Đàm khí uất kết", "Đàm khí uất kết (Mai hạch khí)", 
+            "Đàm nhiệt", "Đàm nhiệt nội nhiễu", "Đàm nhiệt thịnh", "Đàm thấp", "Đàm thấp bế khiếu", 
+            "Đàm thấp nội nhiễu", "Đàm thấp thủy dâm", "Đàm thấp trở lạc", "Đàm thấp uất kết", "Đàm thấp uẩn phế", 
+            "Đàm trọc bế trở", "Đàm trọc bế tắc", "Đàm trọc trung trở", "Đàm ứ trở lạc", "Đàm ứ tý (Lâu ngày)", 
+            "Ẩm thực đình trệ", "Ứ huyết", "Ứ huyết nội kết", "Ứ huyết trở lạc", "Ứ trệ kỳ đầu"
+        ]
+
+        # Lọc lại final_syndromes, chỉ giữ các hội chứng có trong VALID_SYNDROMES
+        filtered_final_syndromes = []
+        for s in final_syndromes:
+            if s in VALID_SYNDROMES:
+                filtered_final_syndromes.append(s)
+            else:
+                logger.warning(f"Phát hiện hội chứng không hợp lệ (ảo giác): '{s}', đã loại bỏ")
+
+        # Nếu sau khi lọc không còn hội chứng nào, đặt lại final_syndromes thành mảng rỗng
+        if not filtered_final_syndromes and final_syndromes:
+            logger.error("Tất cả các hội chứng được tìm thấy đều là ảo giác. Hủy kết quả.")
+            final_syndromes = []
+        else:
+            final_syndromes = filtered_final_syndromes
+        # === KẾT THÚC CHẶN KẾT QUẢ KHÔNG HỢP LỆ ===
+
         qa_result = None
         if final_syndromes:
             import json, os
