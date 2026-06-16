@@ -341,9 +341,11 @@
             // Gốc: Bệnh nhân
             nodes.push({ id: 'patient', label: 'Bệnh Nhân', color: '#0d9488', font: { color: '#ffffff', size: 14, bold: true }, shape: 'circle' });
 
-            // Bóc tách danh sách triệu chứng
+            // Bóc tách danh sách triệu chứng (gồm cả triệu chứng nhập text và ảnh)
             let symptoms = [];
-            if(data.vision_details && data.vision_details.analysis) {
+            if(data.input_fusion) {
+                symptoms = data.input_fusion.split(',').map(s => s.trim());
+            } else if(data.vision_details && data.vision_details.analysis) {
                 symptoms = data.vision_details.analysis.split(',').map(s => s.trim());
             }
 
@@ -359,9 +361,9 @@
                 edges.push({ from: 'patient', to: symId, label: 'có biểu hiện', color: '#fca5a5', font: { size: 9 } });
             });
 
-            // Lập bản đồ cho Hội chứng & Bài thuốc
-            if(data.vision_details && data.vision_details.direct_treatments) {
-                data.vision_details.direct_treatments.forEach((treat, idx) => {
+            // Lập bản đồ cho Hội chứng & Bài thuốc lấy từ kết quả chẩn đoán chính xác Neo4j
+            if(data.diagnosis_result && data.diagnosis_result.data) {
+                data.diagnosis_result.data.forEach((treat, idx) => {
                     const synId = `syn_${idx}`;
                     const pId = `pres_${idx}`;
 
@@ -374,7 +376,7 @@
                         shape: 'ellipse'
                     });
 
-                    // Kết nối các triệu chứng đến hội chứng
+                    // Kết nối các triệu chứng tương ứng đến hội chứng
                     symptoms.forEach((sym, sIdx) => {
                         edges.push({ from: `sym_${sIdx}`, to: synId, color: '#fef08a', style: 'dashed' });
                     });
@@ -390,9 +392,16 @@
 
                     edges.push({ from: synId, to: pId, label: 'trị bằng', color: '#bbf7d0', font: { size: 9 } });
 
-                    // Tạo Node Vị thuốc
-                    if(treat.vi_thuoc && Array.isArray(treat.vi_thuoc)) {
-                        treat.vi_thuoc.slice(0, 4).forEach((vi, vIdx) => {
+                    // Tạo Node Vị thuốc (Hỗ trợ cả danh sách hoặc chuỗi phân tách bởi dấu phẩy)
+                    if(treat.vi_thuoc) {
+                        let herbsList = [];
+                        if (Array.isArray(treat.vi_thuoc)) {
+                            herbsList = treat.vi_thuoc;
+                        } else if (typeof treat.vi_thuoc === 'string') {
+                            herbsList = treat.vi_thuoc.split(',').map(v => v.trim());
+                        }
+                        
+                        herbsList.slice(0, 8).forEach((vi, vIdx) => {
                             const herbId = `herb_${idx}_${vIdx}`;
                             nodes.push({
                                 id: herbId,
