@@ -84,41 +84,16 @@ class TCMQA:
         5. DYNAMIC RETURN: 
            - ONLY diseases ("bệnh"): return `b.name`.
            - ONLY medicine ("thuốc"): return `p.name`.
-           - BOTH or UNSPECIFIED intent (just listing symptoms): use `OPTIONAL MATCH` and return `b.name`, `p.name`.
+           - **UNSPECIFIED INTENT (no 'bệnh' or 'thuốc'): ALWAYS return `b.name` from the symptom-path.** 
+             *Do NOT invent new syndromes or prescriptions.*
+             *Example: `MATCH (t:TrieuChung) WHERE toLower(t.name) CONTAINS toLower('ho liên tục') MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t) RETURN DISTINCT b.name`*
         6. Output ONLY a SINGLE raw Cypher query. No explanations.
-        7. FOR MULTIPLE SYMPTOMS (VERY IMPORTANT):
-           - When the user mentions multiple symptoms (e.g., "ho nhiều, đờm trắng", "sốt cao, đau đầu"), you MUST use a separate `MATCH` clause for EACH symptom.
-           - Each `MATCH` clause will connect the disease to a symptom through a syndrome.
-           - Example for "ho nhiều đờm trắng":
-             MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h1:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung)
-             WHERE toLower(t1.name) CONTAINS toLower('ho nhiều')
-             MATCH (b)-[:CHIA_THÀNH]->(h2:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung)
-             WHERE toLower(t2.name) CONTAINS toLower('đờm trắng')
-             RETURN DISTINCT b.name
-           - Do NOT use `AND` inside a single `WHERE` clause for multiple symptoms.
+        7. FOR MULTIPLE SYMPTOMS: Use a separate `MATCH` for each symptom.
         
         --- EXAMPLES ---
-        User: "Tôi bị đau đầu là bệnh gì?"
-        Cypher: 
-        MATCH (t:TrieuChung) WHERE toLower(t.name) CONTAINS toLower('đau đầu')
-        MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t)
-        RETURN DISTINCT b.name
-        
-        User: "Tôi bị ho liên tục muốn tìm thuốc chữa"
-        Cypher: 
-        MATCH (t:TrieuChung) WHERE toLower(t.name) CONTAINS toLower('ho liên tục')
-        MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t)
-        OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
-        RETURN DISTINCT p.name
-        
-        User: "Tôi bị ho và khó thở"
-        Cypher:
-        MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h1:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung)
-        WHERE toLower(t1.name) CONTAINS toLower('ho')
-        MATCH (b)-[:CHIA_THÀNH]->(h2:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung)
-        WHERE toLower(t2.name) CONTAINS toLower('khó thở')
-        OPTIONAL MATCH (h1)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
-        RETURN DISTINCT b.name, p.name
+        User: "Tôi bị đau đầu là bệnh gì?" -> Cypher: `...RETURN DISTINCT b.name`
+        User: "Tôi bị ho liên tục" (no target) -> Cypher: `...RETURN DISTINCT b.name`
+        User: "Tôi bị ho và khó thở" -> Cypher: Use separate MATCH for each, RETURN DISTINCT b.name
         ----------------
 
         Now translate this user question:
@@ -129,7 +104,7 @@ class TCMQA:
             response = ollama.chat(
                 model=self.llm_model,
                 messages=[
-                    {"role": "system", "content": "You are a precise Cypher query generator. Follow the instructions exactly."},
+                    {"role": "system", "content": "You are a precise Cypher query generator. Always default to returning `b.name` if the user doesn't specify 'bệnh' or 'thuốc'. Do NOT hallucinate."},
                     {"role": "user", "content": prompt}
                 ],
                 options={
