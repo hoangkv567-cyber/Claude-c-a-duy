@@ -77,28 +77,23 @@ class TCMQA:
         {self.db_schema}
         
         CRITICAL RULES FOR CYPHER GENERATION:
-        1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms from the user's question. 
-           - Example: from "tôi bị ho liên tục", extract ONLY 'ho'. 
-           - Example: from "đau đầu dữ dội", extract ONLY 'đau đầu'. 
-           IGNORE all adverbs, pronouns, and descriptors of time/intensity (tôi, bị, liên tục, dữ dội, rất, quá...).
+        1. CORE MEDICAL KEYWORDS ONLY: Extract ONLY the core medical symptoms. Ignore words like tôi, bị, liên tục...
         
-        2. FUZZY MATCHING: ALWAYS use `WHERE toLower(t.name) CONTAINS toLower('keyword')` on the `TrieuChung` node.
+        2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs (where 'ho' falsely matches 'choáng'). You MUST use Regex word boundaries `\\\\b`.
+           Syntax: WHERE toLower(t.name) =~ '.*\\\\bkeyword\\\\b.*'
+           Example: WHERE toLower(t.name) =~ '.*\\\\bho\\\\b.*'
         
-        3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS): 
-           You MUST ALWAYS use `OPTIONAL MATCH` for diseases and medicines, and you MUST ALWAYS return `b.name`, `h.name`, and `p.name` simultaneously.
-           
-           Strict Template to follow:
+        3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS):
            MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
-           WHERE toLower(t.name) CONTAINS toLower('keyword1')
+           WHERE toLower(t.name) =~ '.*\\\\bkeyword1\\\\b.*'
            OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
            OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
            RETURN DISTINCT b.name, h.name, p.name
         
-        4. FOR MULTIPLE SYMPTOMS: 
-           Use multiple MATCH clauses linked to the SAME syndrome node (h).
-           Example for "ho và sốt":
-           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) CONTAINS toLower('ho')
-           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) CONTAINS toLower('sốt')
+        4. FOR MULTIPLE SYMPTOMS: Use multiple MATCH clauses.
+           Example:
+           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*\\\\bho\\\\b.*'
+           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*\\\\bsốt\\\\b.*'
            OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
            OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
            RETURN DISTINCT b.name, h.name, p.name
@@ -146,23 +141,25 @@ class TCMQA:
         if not terms:
             return records
         
-        # 1. Ưu tiên AND logic (tất cả triệu chứng phải có mặt)
+        import re # Đảm bảo đã import re ở đầu file
+        
+        # 1. Ưu tiên AND logic
         filtered_and = []
         for record in records:
             record_text = " ".join([str(val) for val in record.values()]).lower()
-            if all(term in record_text for term in terms):
+            # Dùng regex \b để bắt buộc từ khóa phải đứng độc lập (vd: \bho\b không match choáng)
+            if all(re.search(rf'\b{re.escape(term)}\b', record_text) for term in terms):
                 filtered_and.append(record)
         
-        # 2. Nếu có kết quả AND, trả về kết quả đó
         if filtered_and:
             return filtered_and
         
-        # 3. Nếu không có AND, fallback sang OR
+        # 2. Fallback sang OR
         logger.warning("Không tìm thấy AND, fallback sang OR")
         filtered_or = []
         for record in records:
             record_text = " ".join([str(val) for val in record.values()]).lower()
-            if any(term in record_text for term in terms):
+            if any(re.search(rf'\b{re.escape(term)}\b', record_text) for term in terms):
                 filtered_or.append(record)
         
         return filtered_or
