@@ -160,54 +160,42 @@ class TCMFusionPipeline:
             return candidate_syndromes
 
     def _generate_explainable_answer(self, user_symptoms: str, detected_symptoms: list, final_syndromes: list, kg_context: str) -> str:
-        """Sử dụng LLM (Qwen) để sinh câu trả lời chẩn đoán tự nhiên, giải thích rõ ràng dựa trên biện chứng luận trị Đông y và trích dẫn trực tiếp đường đi trên Knowledge Graph."""
         detected_symptoms_str = ", ".join(detected_symptoms) if detected_symptoms else "Không có"
         syndromes_str = ", ".join(final_syndromes) if final_syndromes else "Không xác định rõ"
         
+        # Bắt buộc LLM phải copy dữ liệu từ kg_context và không được thêm bất cứ điều gì khác.
+        # Bạn có thể thêm lệnh: "KHÔNG ĐƯỢC TỰ SUY DIỄN hoặc THÊM BẤT CỨ TỪ NGỮ, BỆNH, THUỐC NÀO MỚI. CHỈ DÙNG DỮ LIỆU TRONG KG_CONTEXT."
+        
         prompt = f"""
-        Bạn là một bác sĩ Y học Cổ truyền (Đông y) đầu ngành. Hãy chẩn đoán và giải thích chi tiết, thuyết phục cho bệnh nhân dựa trên phương pháp "Biện chứng luận trị".
+        Bạn là một bác sĩ Y học Cổ truyền trung thực, chính xác. Nhiệm vụ của bạn chỉ là giải thích cho bệnh nhân dựa trên dữ liệu có sẵn.
         
-        THÔNG TIN BỆNH NHÂN:
-        - Triệu chứng bệnh nhân tự mô tả (Vấn chẩn): {user_symptoms if user_symptoms else "Không mô tả"}
-        - Triệu chứng phát hiện qua phân tích hình ảnh khuôn mặt/lưỡi (Vọng chẩn): {detected_symptoms_str}
-        - Hội chứng bệnh lý đã được xác định: {syndromes_str}
-        
-        DỮ LIỆU TRUY XUẤT TỪ ĐỒ THỊ TRI THỨC (KNOWLEDGE GRAPH):
+        DỮ LIỆU DUY NHẤT BẠN ĐƯỢC PHÉP SỬ DỤNG (TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA RA):
         {kg_context}
         
-        YÊU CẦU CỰC KỲ QUAN TRỌNG VỀ LOGIC VÀ ĐỒ THỊ (YÊU CẦU BẮT BUỘC):
-        1. **Không suy diễn lệch pha**: Đối với mỗi hội chứng trong chẩn đoán, bạn CHỈ ĐƯỢC PHÉP liên kết và giải thích nó dựa trên các triệu chứng được ghi ở mục "- Triệu chứng CỦA BỆNH NHÂN khớp với hội chứng này". TUYỆT ĐỐI KHÔNG ĐƯỢC gán các triệu chứng khác của bệnh nhân cho hội chứng đó nếu chúng không khớp (ví dụ: Không được ghi "Triệu chứng [Mặt trắng nhợt] dẫn đến hội chứng [Âm hư]", hoặc "Triệu chứng [Lưỡi có vết nứt] dẫn đến hội chứng [Tâm tỳ lưỡng hư]").
-        2. **Đường đi đồ thị chính xác**: Trích dẫn trực tiếp và chính xác đường đi trên đồ thị tri thức (Knowledge Graph paths). Tên quan hệ bài thuốc - vị thuốc bắt buộc phải là `BAO_GỒM` (không được ghi là BAO_GÔM hay BAO_GOM).
-           Ví dụ minh họa cách viết đường đi:
-           - "Triệu chứng [Tên triệu chứng] dẫn đến hội chứng [Tên hội chứng] thông qua quan hệ `(HoiChung)-[:CÓ_BIỂU_HIỆN]->(TrieuChung)`"
-           - "Hội chứng [Tên hội chứng] thuộc nhóm bệnh [Tên bệnh lý] qua quan hệ `(BenhLy)-[:CHIA_THÀNH]->(HoiChung)`"
-           - "Điều trị hội chứng này bằng bài thuốc [Tên bài thuốc] qua quan hệ `(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`"
-           - "Bài thuốc [Tên bài thuốc] gồm các vị thuốc như [Tên vị thuốc] qua quan hệ `(BaiThuoc)-[:BAO_GỒM]->(ViThuoc)`"
-        3. **TUYỆT ĐỐI KHÔNG TỰ BỊA (NẰM LÒNG QUY TẮC CHỐNG ẢO GIÁC)**:
-           - Bạn CHỈ ĐƯỢC phép sử dụng bài thuốc, các vị thuốc và bệnh lý có trong phần "DỮ LIỆU TRUY XUẤT TỪ ĐỒ THỊ TRI THỨC" được cung cấp ở trên.
-           - TUYỆT ĐỐI KHÔNG tự bịa ra bất cứ tên bài thuốc mới, vị thuốc mới nào ngoài dữ liệu được cung cấp (ví dụ: cấm tự nghĩ ra tên bài thuốc như "Phế Hư Ho Khang", "Bài Thuốc Ho Khí Hư" hay vị thuốc không có thực như "Ngưu Phong").
-           - Nếu phần dữ liệu truy xuất ghi "Chưa rõ" hoặc không trả về bài thuốc/vị thuốc tương ứng cho hội chứng, hãy thông báo rõ: "Hệ thống chưa có dữ liệu bài thuốc phù hợp cho hội chứng này trong cơ sở dữ liệu". Không tự ý kê đơn thuốc bịa.
+        THÔNG TIN BỆNH NHÂN:
+        - Triệu chứng bệnh nhân tự mô tả: {user_symptoms if user_symptoms else "Không mô tả"}
+        - Triệu chứng phát hiện qua phân tích hình ảnh: {detected_symptoms_str}
         
-        CẤU TRÚC CHI TIẾT CÂU TRẢ LỜI:
-        1. **Kết luận chẩn đoán**: Đưa ra kết luận rõ ràng về hội chứng bệnh lý của bệnh nhân.
-        2. **Biện chứng luận trị (Giải thích lý do)**: Giải thích chi tiết và thuyết phục tại sao các triệu chứng khớp của bệnh nhân lại dẫn đến hội chứng chẩn đoán này theo lý luận Đông y (âm dương, khí huyết, tạng phủ, hàn nhiệt, hư thực).
-        3. **Trích dẫn đường đi trên đồ thị tri thức (Knowledge Graph paths)**: Viết rõ các đường đi đồ thị cho từng hội chứng theo yêu cầu số 2 ở trên.
-        4. **Phương dược điều trị**: Giới thiệu bài thuốc phù hợp và các vị thuốc tương ứng, giải thích sơ lược công dụng của bài thuốc/vị thuốc trong việc điều hòa cơ thể.
-        5. **Lời khuyên**: Đưa ra lời khuyên sinh hoạt/dinh dưỡng phù hợp với thể trạng của bệnh nhân.
+        QUY TẮC BẮT BUỘC:
+        1. CHỈ DÙNG DỮ LIỆU TRONG PHẦN "DỮ LIỆU DUY NHẤT" Ở TRÊN.
+        2. TUYỆT ĐỐI KHÔNG TỰ SUY DIỄN, KHÔNG TỰ BỊA RA BỆNH LÝ MỚI, KHÔNG TỰ NGHĨ RA TÊN BỆNH HOẶC BÀI THUỐC MỚI (ví dụ: "Ho thực", "Phế Ho Đơn").
+        3. NẾU DỮ LIỆU TRONG KG_CONTEXT GHI "Chưa rõ" HOẶC CÓ BÀI THUỐC TRỐNG, BẠN PHẢI GHI RÕ "Hệ thống chưa có dữ liệu bài thuốc phù hợp."
+        4. CHỈ SỬ DỤNG ĐÚNG CÁC TÊN BỆNH, TÊN THUỐC, TÊN HỘI CHỨNG CÓ TRONG DỮ LIỆU.
         
-        Hãy trình bày bằng tiếng Việt, giọng điệu ân cần, chuyên nghiệp và khoa học. Tránh dùng các từ ngữ sáo rỗng.
+        Hãy tạo câu trả lời từ dữ liệu trên:
         """
         try:
             import ollama
             response = ollama.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là chuyên gia Đông y chẩn đoán chính xác tuyệt đối theo đồ thị tri thức, không suy diễn lệch pha, sử dụng quan hệ BAO_GỒM. Chỉ sử dụng thông tin từ dữ liệu đồ thị tri thức được cung cấp, tuyệt đối không tự ý bịa bài thuốc hay vị thuốc khác."},
+                    {"role": "system", "content": "Bạn là chuyên gia Đông y. Chỉ được sử dụng dữ liệu có thật. Tuyệt đối không suy diễn."},
                     {"role": "user", "content": prompt}
                 ],
                 options={
-                    "temperature": 0.1,
-                    "seed": 42
+                    "temperature": 0.0,  # Bắt buộc
+                    "seed": 42,
+                    "top_p": 1.0
                 }
             )
             return response['message']['content'].strip()
