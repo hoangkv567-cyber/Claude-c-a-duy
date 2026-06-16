@@ -32,7 +32,7 @@ class TCMQA:
 
         # Danh sách nhãn và quan hệ để LLM biết
         self.node_labels = ["BenhLy", "HoiChung", "TrieuChung", "BaiThuoc", "ViThuoc"]
-        self.rel_types = ["CHIA_THANH", "CO_BIEU_HIEN", "DUOC_DIEU_TRI_BANG", "BAO_GOM"]
+        self.rel_types = ["CHIA_THÀNH", "CÓ_BIỂU_HIỆN", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG", "BAO_GÔM"]
 
     def close(self):
         self.driver.close()
@@ -84,18 +84,18 @@ class TCMQA:
            Example: WHERE toLower(t.name) =~ '.*\\\\bho\\\\b.*'
         
         3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS):
-           MATCH (h:HoiChung)-[:CO_BIEU_HIEN]->(t:TrieuChung)
+           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
            WHERE toLower(t.name) =~ '.*\\\\bkeyword1\\\\b.*'
-           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THANH]->(h)
-           OPTIONAL MATCH (h)-[:DUOC_DIEU_TRI_BANG]->(p:BaiThuoc)
+           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
+           OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
            RETURN DISTINCT b.name, h.name, p.name
         
         4. FOR MULTIPLE SYMPTOMS: Use multiple MATCH clauses.
            Example:
-           MATCH (h:HoiChung)-[:CO_BIEU_HIEN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*\\\\bho\\\\b.*'
-           MATCH (h)-[:CO_BIEU_HIEN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*\\\\bsốt\\\\b.*'
-           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THANH]->(h)
-           OPTIONAL MATCH (h)-[:DUOC_DIEU_TRI_BANG]->(p:BaiThuoc)
+           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*\\\\bho\\\\b.*'
+           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*\\\\bsốt\\\\b.*'
+           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
+           OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
            RETURN DISTINCT b.name, h.name, p.name
 
         5. Output ONLY a SINGLE raw Cypher query. Do NOT use markdown code blocks (like ```cypher). No explanations.

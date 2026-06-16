@@ -17,8 +17,8 @@ class Neo4jTCMClient:
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (s:HoiChung {name: $name})-[:DUOC_DIEU_TRI_BANG]->(p:BaiThuoc)
-                OPTIONAL MATCH (p)-[:BAO_GOM]->(v:ViThuoc)
+                MATCH (s:HoiChung {name: $name})-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+                OPTIONAL MATCH (p)-[:BAO_GÔM]->(v:ViThuoc)
                 RETURN s.name AS hoi_chung, 
                        p.name AS bai_thuoc, 
                        COLLECT(DISTINCT v.name) AS vi_thuoc
@@ -48,7 +48,7 @@ class Neo4jTCMClient:
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (s:HoiChung {name: $name})-[:CO_BIEU_HIEN]->(t:TrieuChung)
+                MATCH (s:HoiChung {name: $name})-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
                 RETURN t.name AS trieu_chung
                 """,
                 name=syndrome_name
@@ -60,7 +60,7 @@ class Neo4jTCMClient:
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (b:BenhLy)-[:CHIA_THANH]->(s:HoiChung {name: $name})
+                MATCH (b:BenhLy)-[:CHIA_THÀNH]->(s:HoiChung {name: $name})
                 RETURN b.name AS benh_ly
                 """,
                 name=syndrome_name
