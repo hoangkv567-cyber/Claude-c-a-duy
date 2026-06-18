@@ -198,9 +198,40 @@ class TCMFusionPipeline:
                 final_markdown += f"- **Thành phần vị thuốc:** Bao gồm **{vi_thuoc}** `(BaiThuoc)-[:BAO_GÔM]->(ViThuoc)`\n\n"
             else:
                 final_markdown += f"- **Phương dược điều trị:** Hiện chưa có bài thuốc cập nhật cho hội chứng này trong hệ thống.\n\n"
-                
+        # Thu thập danh sách tất cả các bệnh để sinh lời khuyên phù hợp
+        all_diseases = []
+        for data in detailed_kg_data:
+            if data["diseases"]:
+                all_diseases.extend(data["diseases"])
+        all_diseases = list(set(all_diseases))
+
+        explanation_advice = ""
+        if all_diseases:
+            prompt_advice = f"""
+            Vai trò: Bác sĩ Đông y.
+            Bệnh nhân có các bệnh lý liên quan: {', '.join(all_diseases)}.
+            Nhiệm vụ: Viết 2-3 lời khuyên ngắn gọn (gạch đầu dòng), thiết thực về chế độ ăn uống, sinh hoạt, nghỉ ngơi cụ thể cho nhóm bệnh trên.
+            Lưu ý: Viết súc tích, dễ hiểu, chuyên nghiệp. Không ghi lời mở đầu hay kết bài, chỉ trả về các dòng gạch đầu dòng.
+            """
+            try:
+                res_adv = self.qa_pipeline.client.chat(
+                    model=self.qa_pipeline.llm_model,
+                    messages=[{"role": "user", "content": prompt_advice}],
+                    options={"temperature": 0.2, "seed": 42}
+                )
+                explanation_advice = res_adv['message']['content'].strip()
+            except Exception as e:
+                logger.error(f"Lỗi LLM sinh lời khuyên: {e}")
+
+        if not explanation_advice:
+            explanation_advice = (
+                "- Vui lòng nghỉ ngơi điều độ, tránh căng thẳng và giữ tinh thần thoải mái.\n"
+                "- Ăn uống thanh đạm, hạn chế thực phẩm nhiều dầu mỡ, cay nóng hoặc khó tiêu.\n"
+                "- Theo dõi sát sao các triệu chứng và đến cơ sở y tế gần nhất nếu có dấu hiệu bất thường."
+            )
+
         final_markdown += "### 3. Lời khuyên tổng quát\n"
-        final_markdown += "- Vui lòng nghỉ ngơi điều độ, ăn uống các thực phẩm dễ tiêu hóa và giữ tinh thần thoải mái. Theo dõi thêm triệu chứng để có hướng điều trị kịp thời."
+        final_markdown += explanation_advice
 
         return final_markdown
 
