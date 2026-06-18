@@ -35,17 +35,19 @@ async def diagnose(
     tongue_img: UploadFile = File(None)
 ):
     import uuid
+    import tempfile
     face_path, tongue_path = None, None
     try:
-        # Lưu file tạm với tên độc nhất để tránh đè file/lock file trên Windows
+        # Lưu file tạm với tên độc nhất trong thư mục temp của hệ điều hành để tránh lỗi quyền ghi
+        temp_dir = tempfile.gettempdir()
         if face_img:
             ext = os.path.splitext(face_img.filename)[1] or ".jpg"
-            face_path = f"temp_uploads/{uuid.uuid4()}{ext}"
+            face_path = os.path.join(temp_dir, f"{uuid.uuid4()}{ext}")
             with open(face_path, "wb") as buffer:
                 shutil.copyfileobj(face_img.file, buffer)
         if tongue_img:
             ext = os.path.splitext(tongue_img.filename)[1] or ".jpg"
-            tongue_path = f"temp_uploads/{uuid.uuid4()}{ext}"
+            tongue_path = os.path.join(temp_dir, f"{uuid.uuid4()}{ext}")
             with open(tongue_path, "wb") as buffer:
                 shutil.copyfileobj(tongue_img.file, buffer)
 
