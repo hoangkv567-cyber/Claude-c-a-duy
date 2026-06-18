@@ -3,6 +3,8 @@ import logging
 from src.pipeline import TCMTonguePipeline
 from src.qa_system import TCMQA
 
+from src.utils import normalize_symptoms_text
+
 logger = logging.getLogger(__name__)
 
 class TCMFusionPipeline:
@@ -25,6 +27,7 @@ class TCMFusionPipeline:
         """Trích xuất hội chứng bằng cách nhờ LLM lọc từ khóa y khoa rồi mới query Neo4j"""
         if not text:
             return []
+        text = normalize_symptoms_text(text)
         syndromes = []
         try:
             # 1. Nhờ LLM đóng vai trò màng lọc nhiễu (Bỏ các từ: liên tục, quá, bị, tôi...)

@@ -5,6 +5,7 @@ import re
 from neo4j import GraphDatabase
 import ollama
 from src.config_loader import load_config
+from src.utils import normalize_symptoms_text
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +76,10 @@ class TCMQA:
         return extracted
 
     def _preprocess_question(self, question: str) -> list:
+        # Chuẩn hóa văn bản trước khi khớp
+        normalized_q = normalize_symptoms_text(question)
         # Sử dụng thuật toán khớp triệu chứng trực tiếp từ database (Longest Match First)
-        return self._extract_symptoms_by_matching(question)
+        return self._extract_symptoms_by_matching(normalized_q)
 
     def text_to_cypher(self, user_question: str, terms: list = None) -> str:
         if terms is None:
