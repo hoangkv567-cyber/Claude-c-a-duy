@@ -43,17 +43,17 @@ def normalize_symptoms_text(text: str) -> str:
     if not text:
         return text
     import re
-    # nôn -> nôn mửa
-    text = re.sub(r'\bnôn\b', 'nôn mửa', text, flags=re.IGNORECASE)
-    # mệt -> mệt mỏi
-    text = re.sub(r'\bmệt\b', 'mệt mỏi', text, flags=re.IGNORECASE)
-    # khát -> khát nước
-    text = re.sub(r'\bkhát\b', 'khát nước', text, flags=re.IGNORECASE)
-    # sốt -> phát sốt
-    text = re.sub(r'\bsốt\b', 'phát sốt', text, flags=re.IGNORECASE)
-    # trướng -> bụng chướng
-    text = re.sub(r'\btrướng\b', 'bụng chướng', text, flags=re.IGNORECASE)
-    # chướng -> bụng chướng
-    text = re.sub(r'\bchướng\b', 'bụng chướng', text, flags=re.IGNORECASE)
+    # nôn -> nôn mửa (chỉ thay thế nếu không được theo sau bởi 'mửa')
+    text = re.sub(r'\bnôn\b(?!\s+mửa)', 'nôn mửa', text, flags=re.IGNORECASE)
+    # mệt -> mệt mỏi (chỉ thay thế nếu không được theo sau bởi 'mỏi')
+    text = re.sub(r'\bmệt\b(?!\s+mỏi)', 'mệt mỏi', text, flags=re.IGNORECASE)
+    # khát -> khát nước (chỉ thay thế nếu không được theo sau bởi 'nước')
+    text = re.sub(r'\bkhát\b(?!\s+nước)', 'khát nước', text, flags=re.IGNORECASE)
+    # sốt -> phát sốt (chỉ thay thế nếu không đi sau 'phát')
+    text = re.sub(r'(?<!phát\s)\bsốt\b', 'phát sốt', text, flags=re.IGNORECASE)
+    # trướng -> bụng chướng (chỉ thay thế nếu không đi sau 'bụng')
+    text = re.sub(r'(?<!bụng\s)\btrướng\b', 'bụng chướng', text, flags=re.IGNORECASE)
+    # chướng -> bụng chướng (chỉ thay thế nếu không đi sau 'bụng')
+    text = re.sub(r'(?<!bụng\s)\bchướng\b', 'bụng chướng', text, flags=re.IGNORECASE)
     return text
 
