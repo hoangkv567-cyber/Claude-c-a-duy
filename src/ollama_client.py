@@ -14,6 +14,17 @@ class OllamaTCMClient:
         self.top_p = float(self.config.get("top_p", 1.0))
         self.seed = int(self.config.get("seed", 42))  # Thêm seed để ổn định hoàn toàn
         
+        # Hỗ trợ host remote
+        self.host = self.config.get("host") or self.config.get("ollama", {}).get("host")
+        if self.host:
+            from ollama import Client
+            self.client = Client(host=self.host)
+            logger.info(f"Khởi tạo Ollama Client kết nối remote host: {self.host}")
+        else:
+            import ollama
+            self.client = ollama
+            logger.info(f"Khởi tạo Ollama client với model: {model_name}, temp={self.temperature}, seed={self.seed}")
+            
         # Danh sách triệu chứng lưỡi và mặt mặc định (bắt buộc để không bị lỗi Attribute lỗi)
         self.symptom_list = [
             "Lưỡi bệu có dấu răng", "Rêu lưỡi trắng mỏng", "Lưỡi đỏ",
@@ -24,8 +35,6 @@ class OllamaTCMClient:
             "Mặt đỏ", "Mặt trắng nhợt", "Mặt vàng", "Mặt xanh",
             "Mặt đen", "Mặt phù", "Mặt có ban"
         ]
-        
-        logger.info(f"Khởi tạo Ollama client với model: {model_name}, temp={self.temperature}, seed={self.seed}")
 
     def diagnose_image(self, image_path: str, modality: str = "tongue") -> list:
         """Gửi ảnh đến LLaVA và nhận mảng triệu chứng JSON"""
@@ -42,7 +51,7 @@ class OllamaTCMClient:
         
         try:
             logger.info(f"Gửi ảnh {image_path} đến LLaVA (modality={modality})...")
-            response = ollama.chat(
+            response = self.client.chat(
                 model=self.model_name,
                 messages=[
                     {"role": "system", "content": "You are a TCM expert."},

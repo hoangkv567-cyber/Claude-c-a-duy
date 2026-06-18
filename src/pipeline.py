@@ -36,7 +36,7 @@ class TCMTonguePipeline:
         neo4j_user = self.config.get("neo4j", {}).get("user", "c55f875f")
         neo4j_password = self.config.get("neo4j", {}).get("password", "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w")
         
-        self.ollama_client = OllamaTCMClient(model_name=ollama_model)
+        self.ollama_client = OllamaTCMClient(model_name=ollama_model, config=self.config)
         self.neo4j_client = Neo4jTCMClient(uri=neo4j_uri, user=neo4j_user, password=neo4j_password)
 
     def run(self, tongue_image_path: str = None, face_image_path: str = None) -> dict:

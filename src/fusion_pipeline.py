@@ -38,8 +38,7 @@ class TCMFusionPipeline:
             TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
             Chỉ trả về danh sách các từ khóa cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
             """
-            import ollama
-            res = ollama.chat(
+            res = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[{"role": "user", "content": prompt}],
                 options={"temperature": 0.0, "seed": 42}
@@ -127,8 +126,7 @@ class TCMFusionPipeline:
         Hãy chọn ra từ 1 đến 3 hội chứng chính xác nhất và trả về dưới dạng danh sách ngăn cách bởi dấu phẩy. Không giải thích gì thêm.
         """
         try:
-            import ollama
-            response = ollama.chat(
+            response = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[{"role": "user", "content": prompt}],
                 options={"temperature": 0.0, "seed": 42}
@@ -179,8 +177,7 @@ class TCMFusionPipeline:
             LỆNH CẤM THÉP: TUYỆT ĐỐI KHÔNG kê đơn thuốc, KHÔNG nhắc đến tên bài thuốc hay vị thuốc nào, KHÔNG đưa ra lời khuyên. CHỈ giải thích cơ chế.
             """
             try:
-                import ollama
-                response = ollama.chat(
+                response = self.qa_pipeline.client.chat(
                     model=self.qa_pipeline.llm_model,
                     messages=[{"role": "user", "content": prompt}],
                     options={"temperature": 0.1, "seed": 42}

@@ -17,6 +17,17 @@ class TCMQA:
         self.seed = self.config.get("qa", {}).get("seed", 42)
         self.top_p = self.config.get("qa", {}).get("top_p", 0.9)
 
+        # Hỗ trợ host remote
+        self.ollama_host = self.config.get("host") or self.config.get("ollama", {}).get("host")
+        if self.ollama_host:
+            from ollama import Client
+            self.client = Client(host=self.ollama_host)
+            logger.info(f"TCMQA kết nối Ollama remote host: {self.ollama_host}")
+        else:
+            import ollama
+            self.client = ollama
+            logger.info("TCMQA kết nối Ollama local host")
+
         # Kết nối Neo4j
         neo4j_cfg = self.config.get("neo4j", {})
         self.driver = GraphDatabase.driver(
@@ -123,8 +134,7 @@ class TCMQA:
         Cypher:
         """
         try:
-            import ollama
-            response = ollama.chat(
+            response = self.client.chat(
                 model=self.llm_model,
                 messages=[
                     {"role": "system", "content": "You are a precise Cypher query generator. Output only the raw query without any markdown formatting."},
