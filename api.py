@@ -34,15 +34,18 @@ async def diagnose(
     face_img: UploadFile = File(None), 
     tongue_img: UploadFile = File(None)
 ):
+    import uuid
     face_path, tongue_path = None, None
     try:
-        # Lưu file tạm ra face_path và tongue_path
+        # Lưu file tạm với tên độc nhất để tránh đè file/lock file trên Windows
         if face_img:
-            face_path = f"temp_uploads/{face_img.filename}"
+            ext = os.path.splitext(face_img.filename)[1] or ".jpg"
+            face_path = f"temp_uploads/{uuid.uuid4()}{ext}"
             with open(face_path, "wb") as buffer:
                 shutil.copyfileobj(face_img.file, buffer)
         if tongue_img:
-            tongue_path = f"temp_uploads/{tongue_img.filename}"
+            ext = os.path.splitext(tongue_img.filename)[1] or ".jpg"
+            tongue_path = f"temp_uploads/{uuid.uuid4()}{ext}"
             with open(tongue_path, "wb") as buffer:
                 shutil.copyfileobj(tongue_img.file, buffer)
 
@@ -56,6 +59,15 @@ async def diagnose(
     except Exception as e:
         logger.error(f"Lỗi: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Xóa các file tạm sau khi đã xử lý xong
+        for path in [face_path, tongue_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                    logger.info(f"Đã dọn dẹp file tạm: {path}")
+                except Exception as e:
+                    logger.warning(f"Không thể xóa file tạm {path}: {e}")
 
 if __name__ == "__main__":
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
