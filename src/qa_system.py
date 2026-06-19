@@ -26,13 +26,17 @@ class TCMQA:
             self.llm_model = model_id
             
             class HuggingFaceChatClient:
-                def __init__(self, token_val: str, model_val: str):
+                def __init__(self, token_val: str, model_val: str, proxy: str = None):
                     self.token = token_val
                     self.model_id = model_val
                     self.url = f"https://api-inference.huggingface.co/models/{model_val}/v1/chat/completions"
                     import httpx
-                    self.http_client = httpx.Client(timeout=60.0)
-                    logger.info(f"Khởi tạo HuggingFace Serverless Client cho model: {model_val}")
+                    if proxy:
+                        self.http_client = httpx.Client(proxies=proxy, timeout=60.0)
+                        logger.info(f"Khởi tạo HuggingFace Serverless Client cho model {model_val} qua proxy: {proxy}")
+                    else:
+                        self.http_client = httpx.Client(timeout=60.0)
+                        logger.info(f"Khởi tạo HuggingFace Serverless Client cho model: {model_val}")
 
                 def chat(self, model: str, messages: list, options: dict = None) -> dict:
                     headers = {
@@ -68,7 +72,8 @@ class TCMQA:
                             logger.error(f"Chi tiết phản hồi lỗi: {response.text}")
                         raise e
 
-            self.client = HuggingFaceChatClient(token, model_id)
+            proxy = hf_cfg.get("proxy")
+            self.client = HuggingFaceChatClient(token, model_id, proxy)
             logger.info("TCMQA kết nối Hugging Face Cloud Inference API thành công!")
         else:
             # Hỗ trợ host remote
