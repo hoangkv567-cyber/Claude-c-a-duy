@@ -39,7 +39,39 @@ class TCMFusionPipeline:
         
         syndromes = []
         try:
-            # 1. Thử khớp triệu chứng chính xác từ database trước (Longest Match First)
+            # 1. Thử khớp tên bệnh lý (BenhLy) từ database trước
+            matched_diseases = []
+            try:
+                with self.qa_pipeline.driver.session() as session:
+                    result = session.run("MATCH (b:BenhLy) RETURN b.name AS name")
+                    db_diseases = [record["name"] for record in result]
+                
+                db_diseases_sorted = sorted(db_diseases, key=len, reverse=True)
+                text_lower = text.lower()
+                for disease in db_diseases_sorted:
+                    if len(disease.split()) < 2 and disease.lower() not in ["ho", "lao"]:
+                        continue
+                    import re
+                    pattern = rf'\b{re.escape(disease.lower())}\b'
+                    if re.search(pattern, text_lower):
+                        matched_diseases.append(disease)
+            except Exception as ex:
+                logger.error(f"Lỗi khớp tên bệnh lý: {ex}")
+
+            if matched_diseases:
+                logger.info(f"Đã khớp bệnh lý chính xác từ database: {matched_diseases}")
+                diseases_lower = [d.lower() for d in matched_diseases]
+                cypher = f"""
+                MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)
+                WHERE toLower(b.name) IN {diseases_lower}
+                RETURN DISTINCT h.name
+                """
+                records = self.qa_pipeline.run_cypher(cypher)
+                for rec in records:
+                    if rec.get('h.name'):
+                        syndromes.append(rec['h.name'])
+
+            # 2. Thử khớp triệu chứng chính xác từ database (Longest Match First)
             exact_symptoms = self.qa_pipeline._preprocess_question(text)
             if exact_symptoms:
                 logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
@@ -54,8 +86,8 @@ class TCMFusionPipeline:
                     if rec.get('h.name'):
                         syndromes.append(rec['h.name'])
                 
-                if syndromes:
-                    return list(set(syndromes))
+            if syndromes:
+                return list(set(syndromes))
 
             # 2. Fallback: Nếu không khớp chính xác, dùng LLM đóng vai trò màng lọc nhiễu
             logger.info("Không khớp được triệu chứng chính xác, chuyển sang dùng LLM lọc từ khóa...")
