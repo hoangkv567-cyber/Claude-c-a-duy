@@ -39,7 +39,22 @@ class TCMFusionPipeline:
         
         syndromes = []
         try:
-            # 1. Thử khớp tên bệnh lý (BenhLy) từ database trước
+            # 1. Thử khớp triệu chứng chính xác từ database trước (Longest Match First)
+            exact_symptoms = self.qa_pipeline._preprocess_question(text)
+            if exact_symptoms:
+                logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
+                symptoms_lower = [s.lower() for s in exact_symptoms]
+                cypher = f"""
+                MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
+                WHERE toLower(t.name) IN {symptoms_lower}
+                RETURN DISTINCT h.name
+                """
+                records = self.qa_pipeline.run_cypher(cypher)
+                for rec in records:
+                    if rec.get('h.name'):
+                        syndromes.append(rec['h.name'])
+
+            # 2. Thử khớp tên bệnh lý (BenhLy) từ database
             matched_diseases = []
             try:
                 with self.qa_pipeline.driver.session() as session:
@@ -58,27 +73,23 @@ class TCMFusionPipeline:
             except Exception as ex:
                 logger.error(f"Lỗi khớp tên bệnh lý: {ex}")
 
+            # Lọc bỏ các bệnh lý trùng lặp hoặc là con (sub-phrase) của các triệu chứng đã khớp để ưu tiên triệu chứng đặc hiệu
+            if exact_symptoms and matched_diseases:
+                filtered_diseases = []
+                symptoms_lower = [s.lower() for s in exact_symptoms]
+                for disease in matched_diseases:
+                    disease_lower = disease.lower()
+                    if any(disease_lower in sym for sym in symptoms_lower):
+                        continue
+                    filtered_diseases.append(disease)
+                matched_diseases = filtered_diseases
+
             if matched_diseases:
                 logger.info(f"Đã khớp bệnh lý chính xác từ database: {matched_diseases}")
                 diseases_lower = [d.lower() for d in matched_diseases]
                 cypher = f"""
                 MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)
                 WHERE toLower(b.name) IN {diseases_lower}
-                RETURN DISTINCT h.name
-                """
-                records = self.qa_pipeline.run_cypher(cypher)
-                for rec in records:
-                    if rec.get('h.name'):
-                        syndromes.append(rec['h.name'])
-
-            # 2. Thử khớp triệu chứng chính xác từ database (Longest Match First)
-            exact_symptoms = self.qa_pipeline._preprocess_question(text)
-            if exact_symptoms:
-                logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
-                symptoms_lower = [s.lower() for s in exact_symptoms]
-                cypher = f"""
-                MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
-                WHERE toLower(t.name) IN {symptoms_lower}
                 RETURN DISTINCT h.name
                 """
                 records = self.qa_pipeline.run_cypher(cypher)
