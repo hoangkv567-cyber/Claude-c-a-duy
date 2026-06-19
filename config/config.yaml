@@ -11,5 +11,10 @@ qa:
   seed: 42
   top_p: 0.9
 
+huggingface:
+  use_cloud: true
+  token: "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"
+  model: "Qwen/Qwen2.5-7B-Instruct"
+
 logging:
   level: "INFO"

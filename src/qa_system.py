@@ -17,16 +17,70 @@ class TCMQA:
         self.seed = self.config.get("qa", {}).get("seed", 42)
         self.top_p = self.config.get("qa", {}).get("top_p", 0.9)
 
-        # Hỗ trợ host remote
-        self.ollama_host = self.config.get("host") or self.config.get("ollama", {}).get("host")
-        if self.ollama_host:
-            from ollama import Client
-            self.client = Client(host=self.ollama_host)
-            logger.info(f"TCMQA kết nối Ollama remote host: {self.ollama_host}")
+        # Cấu hình sử dụng Hugging Face Cloud hoặc Ollama
+        hf_cfg = self.config.get("huggingface", {})
+        if hf_cfg.get("use_cloud", False):
+            # Khởi tạo client Hugging Face Serverless
+            token = hf_cfg.get("token")
+            model_id = hf_cfg.get("model", "Qwen/Qwen2.5-7B-Instruct")
+            self.llm_model = model_id
+            
+            class HuggingFaceChatClient:
+                def __init__(self, token_val: str, model_val: str):
+                    self.token = token_val
+                    self.model_id = model_val
+                    self.url = f"https://api-inference.huggingface.co/models/{model_val}/v1/chat/completions"
+                    import httpx
+                    self.http_client = httpx.Client(timeout=60.0)
+                    logger.info(f"Khởi tạo HuggingFace Serverless Client cho model: {model_val}")
+
+                def chat(self, model: str, messages: list, options: dict = None) -> dict:
+                    headers = {
+                        "Authorization": f"Bearer {self.token}",
+                        "Content-Type": "application/json"
+                    }
+                    temperature = 0.0
+                    if options:
+                        if "temperature" in options:
+                            temperature = options["temperature"]
+                        if temperature == 0.0:
+                            temperature = 0.01
+                    payload = {
+                        "model": self.model_id,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "stream": False
+                    }
+                    try:
+                        response = self.http_client.post(self.url, headers=headers, json=payload)
+                        response.raise_for_status()
+                        data = response.json()
+                        content = data["choices"][0]["message"]["content"]
+                        return {
+                            "message": {
+                                "role": "assistant",
+                                "content": content
+                            }
+                        }
+                    except Exception as e:
+                        logger.error(f"Lỗi gọi Hugging Face Serverless API: {e}")
+                        if 'response' in locals() and response is not None:
+                            logger.error(f"Chi tiết phản hồi lỗi: {response.text}")
+                        raise e
+
+            self.client = HuggingFaceChatClient(token, model_id)
+            logger.info("TCMQA kết nối Hugging Face Cloud Inference API thành công!")
         else:
-            import ollama
-            self.client = ollama
-            logger.info("TCMQA kết nối Ollama local host")
+            # Hỗ trợ host remote
+            self.ollama_host = self.config.get("host") or self.config.get("ollama", {}).get("host")
+            if self.ollama_host:
+                from ollama import Client
+                self.client = Client(host=self.ollama_host)
+                logger.info(f"TCMQA kết nối Ollama remote host: {self.ollama_host}")
+            else:
+                import ollama
+                self.client = ollama
+                logger.info("TCMQA kết nối Ollama local host")
 
         # Kết nối Neo4j
         neo4j_cfg = self.config.get("neo4j", {})
