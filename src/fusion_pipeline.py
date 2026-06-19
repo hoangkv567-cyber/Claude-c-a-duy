@@ -21,26 +21,59 @@ class TCMFusionPipeline:
         self.qa_pipeline = TCMQA(config=config)
 
         self.qa_pipeline.neo4j_client = self.vision_pipeline.neo4j_client
+
+        # Tải danh sách các hội chứng hợp lệ từ database để tránh ảo giác
+        try:
+            self.valid_syndromes = self.vision_pipeline.neo4j_client.get_all_syndromes()
+            logger.info(f"Đã tải {len(self.valid_syndromes)} hội chứng hợp lệ từ Neo4j")
+        except Exception as e:
+            logger.error(f"Lỗi khi tải danh sách hội chứng từ database: {e}")
+            self.valid_syndromes = []
+
         logger.info("Khởi tạo hoàn tất!")
 
     def _extract_syndromes_from_text(self, text: str) -> list:
-        """Trích xuất hội chứng bằng cách nhờ LLM lọc từ khóa y khoa rồi mới query Neo4j"""
+        """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, nếu không có mới dùng LLM lọc từ khóa"""
         if not text:
             return []
-        text = normalize_symptoms_text(text)
+        
         syndromes = []
         try:
-            # 1. Nhờ LLM đóng vai trò màng lọc nhiễu (Bỏ các từ: liên tục, quá, bị, tôi...)
+            # 1. Thử khớp triệu chứng chính xác từ database trước (Longest Match First)
+            exact_symptoms = self.qa_pipeline._preprocess_question(text)
+            if exact_symptoms:
+                logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
+                symptoms_lower = [s.lower() for s in exact_symptoms]
+                cypher = f"""
+                MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
+                WHERE toLower(t.name) IN {symptoms_lower}
+                RETURN DISTINCT h.name
+                """
+                records = self.qa_pipeline.run_cypher(cypher)
+                for rec in records:
+                    if rec.get('h.name'):
+                        syndromes.append(rec['h.name'])
+                
+                if syndromes:
+                    return list(set(syndromes))
+
+            # 2. Fallback: Nếu không khớp chính xác, dùng LLM đóng vai trò màng lọc nhiễu
+            logger.info("Không khớp được triệu chứng chính xác, chuyển sang dùng LLM lọc từ khóa...")
+            text_norm = normalize_symptoms_text(text)
             prompt = f"""
-            Câu của bệnh nhân: "{text}"
+            Câu của bệnh nhân: "{text_norm}"
             Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA thực sự.
             MỖI TRIỆU CHỨNG PHẢI CÓ TỪ 2 TỪ TRỞ LÊN (ví dụ: ho khan, ho đờm, đau đầu, sốt cao, nôn mửa, chóng mặt).
             TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
+            YÊU CẦU: BẮT BUỘC chỉ trích xuất các từ khóa bằng tiếng Việt chính xác như trong câu của bệnh nhân.
             Chỉ trả về danh sách các từ khóa cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
             """
             res = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "Bạn là trợ lý y khoa chỉ trích xuất từ khóa bằng tiếng Việt từ câu hỏi của bệnh nhân."},
+                    {"role": "user", "content": prompt}
+                ],
                 options={"temperature": 0.0, "seed": 42}
             )
             keywords_str = res['message']['content'].strip()
@@ -52,7 +85,7 @@ class TCMFusionPipeline:
             keywords = [k.strip().lower() for k in keywords_str.split(',') if len(k.strip().split()) >= 2]
             logger.info(f"Từ khóa y khoa đã lọc sạch nhiễu: {keywords}")
             
-            # 2. Quét trực tiếp Database với các từ khóa chuẩn xác
+            # Quét trực tiếp Database với các từ khóa
             for kw in keywords:
                 cypher = f"""
                 MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung) 
@@ -128,7 +161,10 @@ class TCMFusionPipeline:
         try:
             response = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "Bạn là bác sĩ Đông y chỉ phản hồi bằng tiếng Việt."},
+                    {"role": "user", "content": prompt}
+                ],
                 options={"temperature": 0.0, "seed": 42}
             )
             ans = response['message']['content'].strip()
@@ -174,12 +210,16 @@ class TCMFusionPipeline:
             Bệnh nhân có hội chứng: '{syndrome}'. 
             Các triệu chứng: {', '.join(matching) if matching else user_symptoms}.
             Nhiệm vụ: Viết ĐÚNG 1 đoạn văn (3-4 câu) giải thích cơ chế y lý theo Âm Dương Ngũ Hành tại sao các triệu chứng trên lại gây ra hội chứng '{syndrome}'.
+            YÊU CẦU NGÔN NGỮ: BẮT BUỘC viết hoàn toàn bằng tiếng Việt tự nhiên. TUYỆT ĐỐI KHÔNG sử dụng bất kỳ chữ Hán hay tiếng Trung Quốc nào (ví dụ: không được viết 阳, 阴, 清淡饮食... mà phải dịch hoặc giải thích rõ bằng tiếng Việt).
             LỆNH CẤM THÉP: TUYỆT ĐỐI KHÔNG kê đơn thuốc, KHÔNG nhắc đến tên bài thuốc hay vị thuốc nào, KHÔNG đưa ra lời khuyên. CHỈ giải thích cơ chế.
             """
             try:
                 response = self.qa_pipeline.client.chat(
                     model=self.qa_pipeline.llm_model,
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": "Bạn là bác sĩ Đông y uyên bác. Bạn chỉ giải thích bằng tiếng Việt thuần túy, tuyệt đối không dùng tiếng Trung hay chữ Hán."},
+                        {"role": "user", "content": prompt}
+                    ],
                     options={"temperature": 0.1, "seed": 42}
                 )
                 explanation = response['message']['content'].strip()
@@ -211,12 +251,16 @@ class TCMFusionPipeline:
             Vai trò: Bác sĩ Đông y.
             Bệnh nhân có các bệnh lý liên quan: {', '.join(all_diseases)}.
             Nhiệm vụ: Viết 2-3 lời khuyên ngắn gọn (gạch đầu dòng), thiết thực về chế độ ăn uống, sinh hoạt, nghỉ ngơi cụ thể cho nhóm bệnh trên.
+            YÊU CẦU NGÔN NGỮ: BẮT BUỘC viết hoàn toàn bằng tiếng Việt. TUYỆT ĐỐI KHÔNG sử dụng tiếng Trung Quốc hoặc chữ Hán trong các lời khuyên.
             Lưu ý: Viết súc tích, dễ hiểu, chuyên nghiệp. Không ghi lời mở đầu hay kết bài, chỉ trả về các dòng gạch đầu dòng.
             """
             try:
                 res_adv = self.qa_pipeline.client.chat(
                     model=self.qa_pipeline.llm_model,
-                    messages=[{"role": "user", "content": prompt_advice}],
+                    messages=[
+                        {"role": "system", "content": "Bạn là bác sĩ Đông y uyên bác. Bạn chỉ viết lời khuyên bằng tiếng Việt thuần túy, tuyệt đối không dùng tiếng Trung hay chữ Hán."},
+                        {"role": "user", "content": prompt_advice}
+                    ],
                     options={"temperature": 0.2, "seed": 42}
                 )
                 explanation_advice = res_adv['message']['content'].strip()
@@ -341,13 +385,25 @@ class TCMFusionPipeline:
             "Ẩm thực đình trệ", "Ứ huyết", "Ứ huyết nội kết", "Ứ huyết trở lạc", "Ứ trệ kỳ đầu"
         ]
 
-        # Lọc lại final_syndromes, chỉ giữ các hội chứng có trong VALID_SYNDROMES
+        # Lọc lại final_syndromes, chỉ giữ các hội chứng có trong danh sách hợp lệ
         filtered_final_syndromes = []
+        # Tạo mapping case-insensitive từ self.valid_syndromes và VALID_SYNDROMES
+        valid_syndromes_map = {vs.lower(): vs for vs in self.valid_syndromes} if hasattr(self, 'valid_syndromes') and self.valid_syndromes else {}
+        fallback_syndromes_map = {vs.lower(): vs for vs in VALID_SYNDROMES}
+
         for s in final_syndromes:
-            if s in VALID_SYNDROMES:
-                filtered_final_syndromes.append(s)
+            s_lower = s.lower()
+            if valid_syndromes_map:
+                if s_lower in valid_syndromes_map:
+                    filtered_final_syndromes.append(valid_syndromes_map[s_lower])
+                else:
+                    logger.warning(f"Phát hiện hội chứng không hợp lệ (ảo giác): '{s}', đã loại bỏ")
             else:
-                logger.warning(f"Phát hiện hội chứng không hợp lệ (ảo giác): '{s}', đã loại bỏ")
+                # Fallback dùng danh sách hardcoded
+                if s_lower in fallback_syndromes_map:
+                    filtered_final_syndromes.append(fallback_syndromes_map[s_lower])
+                else:
+                    logger.warning(f"Phát hiện hội chứng không hợp lệ (ảo giác): '{s}', đã loại bỏ")
 
         # Nếu sau khi lọc không còn hội chứng nào, đặt lại final_syndromes thành mảng rỗng
         if not filtered_final_syndromes and final_syndromes:
