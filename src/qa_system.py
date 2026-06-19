@@ -29,7 +29,7 @@ class TCMQA:
                 def __init__(self, token_val: str, model_val: str, proxy: str = None):
                     self.token = token_val
                     self.model_id = model_val
-                    self.url = f"https://api-inference.huggingface.co/models/{model_val}/v1/chat/completions"
+                    self.url = "https://router.huggingface.co/v1/chat/completions"
                     import httpx
                     if proxy:
                         self.http_client = httpx.Client(proxies=proxy, timeout=60.0)
