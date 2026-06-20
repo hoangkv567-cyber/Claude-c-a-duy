@@ -33,37 +33,32 @@ class TCMFusionPipeline:
         logger.info("Khởi tạo hoàn tất!")
 
     def _translate_english_description(self, english_text: str) -> str:
-        """Dịch mô tả sắc mặt tiếng Anh sang tiếng Việt bằng Qwen"""
+        """Dịch mô tả sắc mặt/lưỡi tiếng Anh sang tiếng Việt bằng Qwen"""
         if not english_text:
             return ""
+        
+        # Heuristic: Thay thế từ "indicate" bằng "suggest/show" để tránh bug tokenization/loop của Qwen
+        text_clean = english_text.replace("indicate", "suggest").replace("Indicate", "Suggest")
+        text_clean = text_clean.replace("indicates", "suggests").replace("Indicates", "Suggests")
+        
         prompt = f"""
-        Nhiệm vụ: Dịch đoạn mô tả đặc điểm y khoa (sắc mặt hoặc lưỡi) từ tiếng Anh sang tiếng Việt.
-        YÊU CẦU: Dịch sát nghĩa, tự nhiên, sử dụng thuật ngữ Đông y Việt Nam. Chỉ trả về bản dịch tiếng Việt trực tiếp, không dùng chữ Hán, không dùng chữ Nga, không tự sửa lỗi.
+        Translate the following English medical description of patient's features into natural Vietnamese.
+        Output ONLY the translated Vietnamese text. Do not add any explanation or metadata.
 
-        Ví dụ 1:
-        English: "The patient has a pale complexion with dark circles under the eyes, fatigue expression."
-        Vietnamese: "Bệnh nhân có sắc mặt nhợt nhạt với quầng thâm dưới mắt, thần sắc mệt mỏi."
-
-        Ví dụ 2:
-        English: "The tongue is red with a yellow greasy coating and tooth marks on the sides."
-        Vietnamese: "Lưỡi đỏ với rêu lưỡi vàng nhớt và có vết hằn răng ở rìa lưỡi."
-
-        Ví dụ 3:
-        English: "{english_text}"
-        Vietnamese:
+        Text to translate: "{text_clean}"
+        Vietnamese translation:
         """
         try:
             res = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch từ tiếng Anh sang tiếng Việt, phản hồi hoàn toàn bằng chữ cái tiếng Việt, tuyệt đối không dùng chữ Hán hay tiếng nước ngoài."},
+                    {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch văn bản tiếng Anh sang tiếng Việt. Bạn chỉ được viết bằng chữ cái tiếng Việt, tuyệt đối không dùng chữ Hán, chữ Trung Quốc hay ký tự ngoại quốc nào khác."},
                     {"role": "user", "content": prompt}
                 ],
                 options={"temperature": 0.0, "seed": 42}
             )
             ans = res['message']['content'].strip()
-            # Làm sạch nếu mô hình lỡ sinh thêm tiền tố "Vietnamese:" hoặc dấu ngoặc kép
-            ans = ans.replace("Vietnamese:", "").replace('"', '').strip()
+            ans = ans.replace("Vietnamese translation:", "").replace("Vietnamese:", "").replace('"', '').strip()
             return ans
         except Exception as e:
             logger.error(f"Lỗi dịch mô tả tiếng Anh: {e}")
