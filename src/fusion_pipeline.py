@@ -382,8 +382,11 @@ class TCMFusionPipeline:
                 if raw_vision_data and isinstance(raw_vision_data, dict):
                     vision_analysis_text = raw_vision_data.get("analysis", "")
                     
-                    # Dịch mô tả sắc mặt tiếng Anh sang tiếng Việt nếu có
-                    english_indicators = ["patient", "pale", "complexion", "expression", "spirit", "eyes", "swelling", "spots", "rash", "skin", "face", "fatigue", "spiritless", "puffiness", "dark circles", "mole"]
+                    # Dịch mô tả sắc mặt và lưỡi tiếng Anh sang tiếng Việt nếu có
+                    english_indicators = [
+                        "patient", "pale", "complexion", "expression", "spirit", "eyes", "swelling", "spots", "rash", "skin", "face", "fatigue", "spiritless", "puffiness", "dark circles", "mole",
+                        "tongue", "coating", "fur", "body", "tooth marks", "scalloped", "swollen", "cracked", "red", "purple", "slipperiness", "greasy", "peeled"
+                    ]
                     translated_symptoms = []
                     for s in raw_vision_data.get("detected_symptoms", []):
                         if any(w in s.lower() for w in english_indicators):

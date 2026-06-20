@@ -1,17 +1,13 @@
 TONGUE_PROMPT_TEMPLATE = """
-Act as a Traditional Chinese Medicine expert with 20 years of experience in tongue diagnosis (Vọng chẩn).
-Analyze this tongue image carefully and output ONLY a JSON array of symptoms.
+Act as a Traditional Chinese Medicine expert with 20 years of experience in tongue diagnosis (Vọng chẩn - xem lưỡi).
+Analyze this tongue image carefully and write a concise, professional description of the patient's tongue features in English.
 
-IMPORTANT: Check the following features step by step:
-1. Tongue color: red, pale, purple, normal pink
-2. Tongue coating: white, yellow, thin, thick, peeled, no coating
-3. Tongue shape: swollen, tooth marks, cracked, thin, normal
+Please describe:
+1. Tongue body color (e.g., pale, red, deep red, purple, normal pink...).
+2. Tongue coating color and texture (e.g., white or yellow coating, thin or thick coating, greasy/sticky, dry, peeled, or no coating...).
+3. Tongue shape and features (e.g., swollen, thin, cracked, tooth marks/scalloped edges...).
 
-Choose ALL symptoms that match from this list:
-{symptom_list}
-
-Output format: ["symptom1", "symptom2", ...]
-Do not write any explanations or other text.
+Write a concise description in English (1-2 sentences). Do not use JSON or lists. Just write the description directly.
 """
 
 SYNDROME_PROMPT_TEMPLATE = """
