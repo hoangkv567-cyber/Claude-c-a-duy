@@ -37,11 +37,9 @@ class TCMFusionPipeline:
         if not english_text:
             return ""
         prompt = f"""
-        Nhiệm vụ: Dịch đoạn mô tả đặc điểm khuôn mặt/sắc mặt y khoa sau đây từ tiếng Anh sang tiếng Việt một cách tự nhiên, chuẩn y lý Đông y.
-        YÊU CẦU: 
-        - Viết câu hoàn chỉnh bằng tiếng Việt tự nhiên và trôi chảy. 
-        - TUYỆT ĐỐI KHÔNG dùng tiếng Trung hay chữ Hán, dịch nghĩa tiếng Anh rõ ràng (ví dụ: 'pale complexion' -> 'sắc mặt nhợt nhạt', 'dark circles under eyes' -> 'quầng thâm dưới mắt', 'fatigue expression' -> 'thần sắc kém/uể oải').
-        - Chỉ trả về duy nhất bản dịch tiếng Việt trực tiếp, không thêm bớt lời giải thích hay từ mở đầu/kết thúc.
+        Nhiệm vụ: Dịch đoạn mô tả đặc điểm y khoa (sắc mặt hoặc lưỡi) sau đây từ tiếng Anh sang tiếng Việt.
+        Yêu cầu: Dịch sát nghĩa, tự nhiên, sử dụng thuật ngữ y học cổ truyền Việt Nam.
+        Chỉ trả về duy nhất bản dịch tiếng Việt trực tiếp, không giải thích, không thêm bớt lời chào hay kết luận.
 
         Đoạn tiếng Anh: "{english_text}"
         Bản dịch tiếng Việt:
