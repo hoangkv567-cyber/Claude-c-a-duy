@@ -38,8 +38,10 @@ class TCMFusionPipeline:
             return ""
         prompt = f"""
         Nhiệm vụ: Dịch đoạn mô tả đặc điểm y khoa (sắc mặt hoặc lưỡi) sau đây từ tiếng Anh sang tiếng Việt.
-        Yêu cầu: Dịch sát nghĩa, tự nhiên, sử dụng thuật ngữ y học cổ truyền Việt Nam.
-        Chỉ trả về duy nhất bản dịch tiếng Việt trực tiếp, không giải thích, không thêm bớt lời chào hay kết luận.
+        YÊU CẦU BẮT BUỘC:
+        - Bản dịch phải viết hoàn toàn bằng chữ cái tiếng Việt (không dùng chữ Hán, chữ Trung Quốc hay ký tự tiếng Nga, tiếng Anh).
+        - Dịch sát nghĩa, tự nhiên và trôi chảy, sử dụng thuật ngữ Đông y Việt Nam.
+        - Chỉ trả về duy nhất bản dịch tiếng Việt trực tiếp. KHÔNG viết lời giải thích, KHÔNG thêm bớt từ mở đầu hay kết luận.
 
         Đoạn tiếng Anh: "{english_text}"
         Bản dịch tiếng Việt:
@@ -48,7 +50,7 @@ class TCMFusionPipeline:
             res = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là dịch giả y khoa chuyên nghiệp dịch từ tiếng Anh sang tiếng Việt."},
+                    {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch từ tiếng Anh sang tiếng Việt, tuyệt đối không dùng chữ Hán, chữ Trung Quốc hay bất kỳ ký tự ngoại quốc nào khác."},
                     {"role": "user", "content": prompt}
                 ],
                 options={"temperature": 0.0, "seed": 42}
