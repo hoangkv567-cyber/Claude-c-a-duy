@@ -22,12 +22,12 @@ Output ONLY the syndrome name as a JSON string. Example: "Tỳ vị hư nhược
 
 FACE_PROMPT_TEMPLATE = """
 Act as a Traditional Chinese Medicine expert with 20 years of experience in face diagnosis (Vọng chẩn - nhìn sắc mặt).
-Analyze this face image carefully and write a concise description of the patient's facial features in Vietnamese.
+Analyze this face image carefully and write a concise, professional description of the patient's facial features in English.
 
 Please describe:
-1. Sắc mặt (facial color/complexion: ví dụ nhợt nhạt, vàng úa, đỏ rực, sạm đen...).
-2. Thần sắc (spirit/expression: ví dụ mệt mỏi, kém sắc, tinh thần uể oải...).
-3. Dấu hiệu khác nếu có (ví dụ phù nề, quầng thâm mắt, ban đỏ...).
+1. Complexion / Facial color (e.g., pale, sallow, flushed red, dull/dark, yellow, green...).
+2. Spirit / Expression / Shen (e.g., fatigue, lack of spirit, dull eyes, alert/normal...).
+3. Other facial features or abnormalities (e.g., puffiness/swelling, dark circles under eyes, spots, rashes, moles...).
 
-Write a concise description in Vietnamese (1-2 sentences). Do not use JSON or lists. Just write the description directly.
+Write a concise description in English (1-2 sentences). Do not use JSON or lists. Just write the description directly.
 """
