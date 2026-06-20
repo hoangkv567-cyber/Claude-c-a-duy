@@ -56,6 +56,11 @@ class TCMFusionPipeline:
         if not text:
             return ""
             
+        # 1. Xóa các từ lặp lại liên tục do lỗi lặp từ của Qwen (ví dụ: abnormalities-abnormalities-...)
+        # \b(\w+)\b: bắt từ
+        # (?:[\s\-_]+\b\1\b){2,}: tìm từ đó xuất hiện tiếp theo từ 2 lần trở lên
+        text = re.sub(r'\b(\w+)\b(?:[\s\-_]+\b\1\b){2,}', r'\1', text, flags=re.IGNORECASE)
+            
         pattern = r'[\u4e00-\u9fff\u0400-\u04ff]|[yY][kK][aA]3'
         
         # Nếu phát hiện lỗi tokenizer hoặc chữ Hán/Nga, tiến hành tách đoạn để lấy bản dịch sạch ở cuối
@@ -88,9 +93,11 @@ class TCMFusionPipeline:
         if not english_text:
             return ""
         
-        # Heuristic: Thay thế từ "indicate" bằng "suggest/show" để tránh bug tokenization/loop của Qwen
+        # Heuristic: Thay thế các từ nhạy cảm để tránh bug tokenization/loop của Qwen
         text_clean = english_text.replace("indicate", "suggest").replace("Indicate", "Suggest")
         text_clean = text_clean.replace("indicates", "suggests").replace("Indicates", "Suggests")
+        text_clean = text_clean.replace("abnormalities", "abnormal features").replace("Abnormalities", "Abnormal features")
+        text_clean = text_clean.replace("abnormality", "abnormal feature").replace("Abnormality", "Abnormal feature")
         
         prompt = f"""
         Translate the following English medical description of patient's features into natural Vietnamese.
@@ -106,7 +113,7 @@ class TCMFusionPipeline:
                     {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch văn bản tiếng Anh sang tiếng Việt. Bạn chỉ được viết bằng chữ cái tiếng Việt, tuyệt đối không dùng chữ Hán, chữ Trung Quốc hay ký tự ngoại quốc nào khác."},
                     {"role": "user", "content": prompt}
                 ],
-                options={"temperature": 0.0, "seed": 42}
+                options={"temperature": 0.0, "seed": 42, "max_tokens": 150}
             )
             ans = res['message']['content'].strip()
             ans = ans.replace("Vietnamese translation:", "").replace("Vietnamese:", "").replace('"', '').strip()

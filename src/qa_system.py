@@ -55,6 +55,8 @@ class TCMQA:
                         "temperature": temperature,
                         "stream": False
                     }
+                    if options and "max_tokens" in options:
+                        payload["max_tokens"] = options["max_tokens"]
                     try:
                         response = self.http_client.post(self.url, headers=headers, json=payload)
                         response.raise_for_status()
