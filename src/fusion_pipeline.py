@@ -32,6 +32,34 @@ class TCMFusionPipeline:
 
         logger.info("Khởi tạo hoàn tất!")
 
+    def _translate_english_description(self, english_text: str) -> str:
+        """Dịch mô tả sắc mặt tiếng Anh sang tiếng Việt bằng Qwen"""
+        if not english_text:
+            return ""
+        prompt = f"""
+        Nhiệm vụ: Dịch đoạn mô tả đặc điểm khuôn mặt/sắc mặt y khoa sau đây từ tiếng Anh sang tiếng Việt một cách tự nhiên, chuẩn y lý Đông y.
+        YÊU CẦU: 
+        - Viết câu hoàn chỉnh bằng tiếng Việt tự nhiên và trôi chảy. 
+        - TUYỆT ĐỐI KHÔNG dùng tiếng Trung hay chữ Hán, dịch nghĩa tiếng Anh rõ ràng (ví dụ: 'pale complexion' -> 'sắc mặt nhợt nhạt', 'dark circles under eyes' -> 'quầng thâm dưới mắt', 'fatigue expression' -> 'thần sắc kém/uể oải').
+        - Chỉ trả về duy nhất bản dịch tiếng Việt trực tiếp, không thêm bớt lời giải thích hay từ mở đầu/kết thúc.
+
+        Đoạn tiếng Anh: "{english_text}"
+        Bản dịch tiếng Việt:
+        """
+        try:
+            res = self.qa_pipeline.client.chat(
+                model=self.qa_pipeline.llm_model,
+                messages=[
+                    {"role": "system", "content": "Bạn là dịch giả y khoa chuyên nghiệp dịch từ tiếng Anh sang tiếng Việt."},
+                    {"role": "user", "content": prompt}
+                ],
+                options={"temperature": 0.0, "seed": 42}
+            )
+            return res['message']['content'].strip()
+        except Exception as e:
+            logger.error(f"Lỗi dịch mô tả tiếng Anh: {e}")
+            return english_text
+
     def _extract_syndromes_from_text(self, text: str) -> list:
         """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, nếu không có mới dùng LLM lọc từ khóa"""
         if not text:
@@ -346,7 +374,6 @@ class TCMFusionPipeline:
     def run_diagnosis(self, user_symptoms: str = "", face_img_path: str = None, tongue_img_path: str = None) -> dict:
         vision_analysis_text = ""
         raw_vision_data = None
-        vision_syndromes = []
 
         if face_img_path or tongue_img_path:
             logger.info("Bắt đầu phân tích hình ảnh qua LLaVA...")
@@ -354,6 +381,21 @@ class TCMFusionPipeline:
                 raw_vision_data = self.vision_pipeline.run(tongue_image_path=tongue_img_path, face_image_path=face_img_path)
                 if raw_vision_data and isinstance(raw_vision_data, dict):
                     vision_analysis_text = raw_vision_data.get("analysis", "")
+                    
+                    # Dịch mô tả sắc mặt tiếng Anh sang tiếng Việt nếu có
+                    english_indicators = ["patient", "pale", "complexion", "expression", "spirit", "eyes", "swelling", "spots", "rash", "skin", "face", "fatigue", "spiritless", "puffiness", "dark circles", "mole"]
+                    translated_symptoms = []
+                    for s in raw_vision_data.get("detected_symptoms", []):
+                        if any(w in s.lower() for w in english_indicators):
+                            logger.info(f"Dịch mô tả tiếng Anh sang tiếng Việt: {s[:50]}...")
+                            translated_s = self._translate_english_description(s)
+                            translated_symptoms.append(translated_s)
+                        else:
+                            translated_symptoms.append(s)
+                            
+                    raw_vision_data["detected_symptoms"] = translated_symptoms
+                    vision_analysis_text = ", ".join(translated_symptoms)
+                    raw_vision_data["analysis"] = vision_analysis_text
             except Exception as e:
                 logger.error(f"Lỗi module Vision: {e}")
 
