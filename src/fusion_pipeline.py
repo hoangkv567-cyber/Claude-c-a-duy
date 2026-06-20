@@ -336,36 +336,11 @@ class TCMFusionPipeline:
             except Exception as e:
                 logger.error(f"Lỗi module Vision: {e}")
 
-        if raw_vision_data and isinstance(raw_vision_data, dict):
-            vision_syndromes = raw_vision_data.get("syndromes", raw_vision_data.get("possible_syndromes", []))
-
-        text_syndromes = self._extract_syndromes_from_text(user_symptoms) if user_symptoms else []
-
-        final_syndromes = []
-        if text_syndromes and vision_syndromes:
-            final_syndromes = list(set(text_syndromes) & set(vision_syndromes))
-        elif text_syndromes:
-            final_syndromes = text_syndromes
-        elif vision_syndromes:
-            final_syndromes = vision_syndromes
-
         combined_query = user_symptoms.strip()
         if vision_analysis_text:
             combined_query = f"{combined_query}, {vision_analysis_text}" if combined_query else vision_analysis_text
 
-        if not final_syndromes and combined_query:
-            try:
-                qa_res = self.qa_pipeline.execute_and_answer(combined_query)
-                extracted_syndromes = []
-                if qa_res and "data" in qa_res:
-                    for record in qa_res["data"]:
-                        for k, v in record.items():
-                            if ("h.name" in k or "hoichung" in k.lower() or "syndrome" in k.lower()) and v:
-                                extracted_syndromes.append(v)
-                if extracted_syndromes:
-                    final_syndromes = list(set(extracted_syndromes))
-            except Exception as e:
-                logger.error(f"Lỗi truy vấn fallback: {e}")
+        final_syndromes = self._extract_syndromes_from_text(combined_query) if combined_query else []
 
         if len(final_syndromes) > 1:
             symptoms_list = []

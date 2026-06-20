@@ -37,15 +37,13 @@ class OllamaTCMClient:
         ]
 
     def diagnose_image(self, image_path: str, modality: str = "tongue") -> list:
-        """Gửi ảnh đến LLaVA và nhận mảng triệu chứng JSON"""
+        """Gửi ảnh đến LLaVA và nhận mảng triệu chứng hoặc mô tả"""
         if modality == "tongue":
             prompt = TONGUE_PROMPT_TEMPLATE.format(
                 symptom_list=json.dumps(self.symptom_list, ensure_ascii=False)
             )
         elif modality == "face":
-            prompt = FACE_PROMPT_TEMPLATE.format(
-                symptom_list=json.dumps(self.face_symptom_list, ensure_ascii=False)
-            )
+            prompt = FACE_PROMPT_TEMPLATE
         else:
             raise ValueError(f"Modality '{modality}' không được hỗ trợ")
         
@@ -64,7 +62,11 @@ class OllamaTCMClient:
                 }
             )
             
-            content = response['message']['content']
+            content = response['message']['content'].strip()
+            if modality == "face":
+                logger.info(f"LLaVA phân tích sắc mặt: {content}")
+                return [content]
+
             # Clean JSON
             content = content.replace("```json", "").replace("```", "").strip()
             result = json.loads(content)

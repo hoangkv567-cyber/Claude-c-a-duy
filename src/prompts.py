@@ -22,16 +22,12 @@ Output ONLY the syndrome name as a JSON string. Example: "Tỳ vị hư nhược
 
 FACE_PROMPT_TEMPLATE = """
 Act as a Traditional Chinese Medicine expert with 20 years of experience in face diagnosis (Vọng chẩn - nhìn sắc mặt).
-Analyze this face image carefully and output ONLY a JSON array of symptoms.
+Analyze this face image carefully and write a concise description of the patient's facial features in Vietnamese.
 
-IMPORTANT: Check the following features step by step:
-1. Face color: red, pale, yellow, greenish, dark
-2. Swelling: swollen, normal
-3. Rashes or spots: yes, no
+Please describe:
+1. Sắc mặt (facial color/complexion: ví dụ nhợt nhạt, vàng úa, đỏ rực, sạm đen...).
+2. Thần sắc (spirit/expression: ví dụ mệt mỏi, kém sắc, tinh thần uể oải...).
+3. Dấu hiệu khác nếu có (ví dụ phù nề, quầng thâm mắt, ban đỏ...).
 
-Choose ALL symptoms that match from this list:
-{symptom_list}
-
-Output format: ["symptom1", "symptom2", ...]
-Do not write any explanations or other text.
+Write a concise description in Vietnamese (1-2 sentences). Do not use JSON or lists. Just write the description directly.
 """
