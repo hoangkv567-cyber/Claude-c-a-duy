@@ -37,25 +37,34 @@ class TCMFusionPipeline:
         if not english_text:
             return ""
         prompt = f"""
-        Nhiệm vụ: Dịch đoạn mô tả đặc điểm y khoa (sắc mặt hoặc lưỡi) sau đây từ tiếng Anh sang tiếng Việt.
-        YÊU CẦU BẮT BUỘC:
-        - Bản dịch phải viết hoàn toàn bằng chữ cái tiếng Việt (không dùng chữ Hán, chữ Trung Quốc hay ký tự tiếng Nga, tiếng Anh).
-        - Dịch sát nghĩa, tự nhiên và trôi chảy, sử dụng thuật ngữ Đông y Việt Nam.
-        - Chỉ trả về duy nhất bản dịch tiếng Việt trực tiếp. KHÔNG viết lời giải thích, KHÔNG thêm bớt từ mở đầu hay kết luận.
+        Nhiệm vụ: Dịch đoạn mô tả đặc điểm y khoa (sắc mặt hoặc lưỡi) từ tiếng Anh sang tiếng Việt.
+        YÊU CẦU: Dịch sát nghĩa, tự nhiên, sử dụng thuật ngữ Đông y Việt Nam. Chỉ trả về bản dịch tiếng Việt trực tiếp, không dùng chữ Hán, không dùng chữ Nga, không tự sửa lỗi.
 
-        Đoạn tiếng Anh: "{english_text}"
-        Bản dịch tiếng Việt:
+        Ví dụ 1:
+        English: "The patient has a pale complexion with dark circles under the eyes, fatigue expression."
+        Vietnamese: "Bệnh nhân có sắc mặt nhợt nhạt với quầng thâm dưới mắt, thần sắc mệt mỏi."
+
+        Ví dụ 2:
+        English: "The tongue is red with a yellow greasy coating and tooth marks on the sides."
+        Vietnamese: "Lưỡi đỏ với rêu lưỡi vàng nhớt và có vết hằn răng ở rìa lưỡi."
+
+        Ví dụ 3:
+        English: "{english_text}"
+        Vietnamese:
         """
         try:
             res = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch từ tiếng Anh sang tiếng Việt, tuyệt đối không dùng chữ Hán, chữ Trung Quốc hay bất kỳ ký tự ngoại quốc nào khác."},
+                    {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch từ tiếng Anh sang tiếng Việt, phản hồi hoàn toàn bằng chữ cái tiếng Việt, tuyệt đối không dùng chữ Hán hay tiếng nước ngoài."},
                     {"role": "user", "content": prompt}
                 ],
                 options={"temperature": 0.0, "seed": 42}
             )
-            return res['message']['content'].strip()
+            ans = res['message']['content'].strip()
+            # Làm sạch nếu mô hình lỡ sinh thêm tiền tố "Vietnamese:" hoặc dấu ngoặc kép
+            ans = ans.replace("Vietnamese:", "").replace('"', '').strip()
+            return ans
         except Exception as e:
             logger.error(f"Lỗi dịch mô tả tiếng Anh: {e}")
             return english_text
@@ -309,7 +318,7 @@ class TCMFusionPipeline:
                 response = self.qa_pipeline.client.chat(
                     model=self.qa_pipeline.llm_model,
                     messages=[
-                        {"role": "system", "content": "Bạn là bác sĩ Đông y uyên bác. Bạn chỉ giải thích bằng tiếng Việt thuần túy, tuyệt đối không dùng tiếng Trung hay chữ Hán."},
+                        {"role": "system", "content": "Bạn là bác sĩ Đông y Việt Nam uyên bác. Bạn chỉ viết hoàn toàn bằng chữ cái tiếng Việt. Bạn tuyệt đối không được viết bất kỳ chữ Hán hay chữ Trung Quốc nào, kể cả các thuật ngữ y khoa (ví dụ: không viết 阴, 阳, 稀释, 保持...). Mọi thuật ngữ phải được viết bằng tiếng Việt thuần túy."},
                         {"role": "user", "content": prompt}
                     ],
                     options={"temperature": 0.1, "seed": 42}
@@ -350,7 +359,7 @@ class TCMFusionPipeline:
                 res_adv = self.qa_pipeline.client.chat(
                     model=self.qa_pipeline.llm_model,
                     messages=[
-                        {"role": "system", "content": "Bạn là bác sĩ Đông y uyên bác. Bạn chỉ viết lời khuyên bằng tiếng Việt thuần túy, tuyệt đối không dùng tiếng Trung hay chữ Hán."},
+                        {"role": "system", "content": "Bạn là bác sĩ Đông y Việt Nam uyên bác. Bạn chỉ viết lời khuyên bằng chữ cái tiếng Việt. Bạn tuyệt đối không sử dụng chữ Hán hay chữ Trung Quốc (như 稀释, 保持...), tất cả lời khuyên phải dùng tiếng Việt thuần túy."},
                         {"role": "user", "content": prompt_advice}
                     ],
                     options={"temperature": 0.2, "seed": 42}
