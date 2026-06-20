@@ -1,5 +1,6 @@
 # src/fusion_pipeline.py
 import logging
+import re
 from src.pipeline import TCMTonguePipeline
 from src.qa_system import TCMQA
 
@@ -32,6 +33,56 @@ class TCMFusionPipeline:
 
         logger.info("Khởi tạo hoàn tất!")
 
+    def _clean_foreign_characters(self, text: str) -> str:
+        """Loại bỏ toàn bộ chữ Hán, chữ Cyrillic (Nga), token yka3 và ký tự rác để đảm bảo đầu ra sạch 100%"""
+        if not text:
+            return ""
+        # Xóa yka3 (case-insensitive)
+        text = re.sub(r'(?i)\byka3\b', '', text)
+        text = text.replace("yka3", "").replace("Yka3", "")
+        # Xóa toàn bộ chữ Hán và chữ Cyrillic
+        text = re.sub(r'[\u4e00-\u9fff\u0400-\u04ff]', '', text)
+        # Xóa các ký tự dấu câu Trung Quốc đặc thù
+        chinese_symbols = ['：', '，', '。', '！', '？', '（', '）', '【', '】', '“', '”', '‘', '’', '；']
+        for sym in chinese_symbols:
+            text = text.replace(sym, '')
+        # Định dạng lại khoảng trắng thừa
+        text = re.sub(r'[ \t]+', ' ', text)
+        text = re.sub(r'\n\s*\n+', '\n\n', text)
+        return text.strip()
+
+    def _clean_translated_text(self, text: str) -> str:
+        """Tách khối dịch bị lặp/glitch của Qwen và trả về phần dịch chuẩn tiếng Việt cuối cùng"""
+        if not text:
+            return ""
+            
+        pattern = r'[\u4e00-\u9fff\u0400-\u04ff]|[yY][kK][aA]3'
+        
+        # Nếu phát hiện lỗi tokenizer hoặc chữ Hán/Nga, tiến hành tách đoạn để lấy bản dịch sạch ở cuối
+        if re.search(pattern, text):
+            # Tách bằng chuỗi ký tự lỗi/chữ Hán/chữ Nga hoặc dấu hai chấm
+            split_pattern = r'(?:[\u4e00-\u9fff\u0400-\u04ff]|[yY][kK][aA]3|：|，|。|！|？|（|）|【|】)+'
+            parts = re.split(split_pattern, text)
+            parts = [p.strip() for p in parts if p.strip()]
+            
+            if parts:
+                last_part = parts[-1]
+                if len(last_part) > 20:
+                    text = last_part
+                else:
+                    text = max(parts, key=len)
+                    
+        # Áp dụng bộ lọc ký tự ngoại quốc chung
+        text = self._clean_foreign_characters(text)
+        
+        # Chuẩn hóa dấu chấm câu
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'\.+', '.', text)
+        text = text.strip()
+        if text and not text.endswith('.'):
+            text += '.'
+        return text
+
     def _translate_english_description(self, english_text: str) -> str:
         """Dịch mô tả sắc mặt/lưỡi tiếng Anh sang tiếng Việt bằng Qwen"""
         if not english_text:
@@ -59,10 +110,13 @@ class TCMFusionPipeline:
             )
             ans = res['message']['content'].strip()
             ans = ans.replace("Vietnamese translation:", "").replace("Vietnamese:", "").replace('"', '').strip()
+            
+            # Làm sạch kết quả dịch triệt để chống loop và chữ ngoại quốc
+            ans = self._clean_translated_text(ans)
             return ans
         except Exception as e:
             logger.error(f"Lỗi dịch mô tả tiếng Anh: {e}")
-            return english_text
+            return self._clean_translated_text(english_text)
 
     def _extract_syndromes_from_text(self, text: str) -> list:
         """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, nếu không có mới dùng LLM lọc từ khóa"""
@@ -373,7 +427,7 @@ class TCMFusionPipeline:
         final_markdown += "### 3. Lời khuyên tổng quát\n"
         final_markdown += explanation_advice
 
-        return final_markdown
+        return self._clean_foreign_characters(final_markdown)
 
     def run_diagnosis(self, user_symptoms: str = "", face_img_path: str = None, tongue_img_path: str = None) -> dict:
         vision_analysis_text = ""
