@@ -77,6 +77,24 @@ class TCMFusionPipeline:
                 else:
                     text = max(parts, key=len)
                     
+        # 1.5. Dịch các từ tiếng Anh chuyên ngành thường gặp mà Qwen đôi khi bỏ sót
+        replacements = {
+            r'\bExpression\b': 'Biểu cảm',
+            r'\bexpression\b': 'biểu cảm',
+            r'\bComplexion\b': 'Sắc mặt',
+            r'\bcomplexion\b': 'sắc mặt',
+            r'\bAbnormalities\b': 'Đặc điểm bất thường',
+            r'\babnormalities\b': 'đặc điểm bất thường',
+            r'\bAbnormality\b': 'Đặc điểm bất thường',
+            r'\babnormality\b': 'đặc điểm bất thường',
+            r'\bTongue\b': 'Lưỡi',
+            r'\btongue\b': 'lưỡi',
+            r'\bFace\b': 'Mặt',
+            r'\bface\b': 'mặt'
+        }
+        for eng, vie in replacements.items():
+            text = re.sub(eng, vie, text)
+            
         # Áp dụng bộ lọc ký tự ngoại quốc chung
         text = self._clean_foreign_characters(text)
         
