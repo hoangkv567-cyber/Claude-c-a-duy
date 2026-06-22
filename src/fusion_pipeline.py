@@ -421,13 +421,35 @@ class TCMFusionPipeline:
         all_diseases = list(set(all_diseases))
 
         explanation_advice = ""
-        if all_diseases:
+        if all_diseases or all_syndromes:
             prompt_advice = f"""
-            Vai trò: Bác sĩ Đông y.
-            Bệnh nhân có các bệnh lý liên quan: {', '.join(all_diseases)}.
-            Nhiệm vụ: Viết 2-3 lời khuyên ngắn gọn (gạch đầu dòng), thiết thực về chế độ ăn uống, sinh hoạt, nghỉ ngơi cụ thể cho nhóm bệnh trên.
-            YÊU CẦU NGÔN NGỮ: BẮT BUỘC viết hoàn toàn bằng tiếng Việt. TUYỆT ĐỐI KHÔNG sử dụng tiếng Trung Quốc hoặc chữ Hán trong các lời khuyên.
-            Lưu ý: Viết súc tích, dễ hiểu, chuyên nghiệp. Không ghi lời mở đầu hay kết bài, chỉ trả về các dòng gạch đầu dòng.
+            Vai trò: Bác sĩ Đông y giàu kinh nghiệm.
+            Thông tin bệnh nhân:
+            - Bệnh lý liên quan: {', '.join(all_diseases) if all_diseases else 'Chưa xác định rõ bệnh lý cụ thể'}
+            - Hội chứng chứng trạng: {', '.join(all_syndromes)}
+            
+            HƯỚNG DẪN HUYỆT VỊ ĐÔNG Y CHUẨN XÁC (Hãy dùng đúng thông tin này khi viết, không tự bịa vị trí):
+            - Huyệt Túc Tam Lý (ST36): Nằm dưới lõm khớp gối ngoài 3 thốn (khoảng 4 ngón tay khép sát), sát bờ ngoài mào chày. Huyệt này đặc trị các bệnh lý tỳ vị, dạ dày, tiêu hóa kém, mệt mỏi suy nhược.
+            - Huyệt Tam Âm Giao (SP6): Nằm ở sát bờ sau xương chày, từ đỉnh mắt cá chân trong đo thẳng lên 3 thốn (khoảng 4 ngón tay khép sát). Huyệt này là nơi hội tụ của 3 kinh âm (tỳ, can, thận), giúp bổ âm, điều hòa huyết dịch, bổ thận tỳ can.
+            - Huyệt Nội Quan (PC6): Nằm ở mặt trong cổ tay, từ lằn chỉ cổ tay đo lên 2 thốn (khoảng 3 ngón tay khép sát), giữa hai gân cơ. Huyệt này giúp bình vị, trị đau dạ dày, buồn nôn, hồi hộp, mất ngủ.
+            - Huyệt Thái Xung (LR3): Nằm ở mu bàn chân, từ kẽ ngón chân 1 và 2 đo lên 1.5 thốn, trong chỗ lõm trước khớp bàn ngón chân. Huyệt này giúp bình can, hạ hỏa, giải uất, trị nhức đầu, lo âu.
+            - Huyệt Thận Du (BL23): Nằm ở vùng thắt lưng, dưới gai đốt sống thắt lưng 2 (L2) đo ngang ra 1.5 thốn (khoảng 2 ngón tay). Huyệt này giúp bổ thận dương, ích tinh, trị đau thắt lưng, ù tai, mệt mỏi.
+
+            Nhiệm vụ: Hãy đưa ra lời khuyên sức khỏe tổng quát THẬT CHI TIẾT và thực tế, được cá nhân hóa hoàn toàn theo y lý Đông y tương thích với nhóm bệnh và hội chứng trên.
+            
+            Lời khuyên phải được chia làm 3 phần rõ rệt với tiêu đề riêng (dùng định dạng Markdown):
+            1. **Chế độ ăn uống (Dinh dưỡng biện chứng):**
+               - Chỉ rõ các nhóm thực phẩm nên ăn (có tính ấm/mát phù hợp với thể bệnh Âm/Dương, Hàn/Nhiệt của bệnh nhân).
+               - Chỉ rõ các nhóm thực phẩm cần kiêng kỵ tuyệt đối (ví dụ: đồ cay nóng, đồ lạnh sống, dầu mỡ, chất kích thích... giải thích rõ lý do y lý).
+            2. **Chế độ sinh hoạt và Nghỉ ngơi:**
+               - Hướng dẫn chế độ giấc ngủ (giờ giấc đi ngủ, thức dậy phù hợp để dưỡng tạng phủ bị bệnh).
+               - Hướng dẫn điều hòa tinh thần, cảm xúc (tránh tức giận hại can, lo lắng hại tỳ, lo sợ hại thận... tùy theo tạng phủ bị tổn thương).
+            3. **Phương pháp tự chăm sóc và Tập luyện hỗ trợ:**
+               - Gợi ý bài tập vận động nhẹ nhàng phù hợp (Khí công, Thái cực quyền, đi bộ dưỡng sinh...).
+               - Gợi ý xoa bóp, bấm 1-2 huyệt vị đơn giản, an toàn dễ thực hiện tại nhà (chọn trong danh sách HƯỚNG DẪN HUYỆT VỊ ĐÔNG Y CHUẨN XÁC ở trên phù hợp với thể bệnh của bệnh nhân, ghi chính xác tên huyệt, vị trí và cách day ấn).
+
+            YÊU CẦU NGÔN NGỮ: BẮT BUỘC viết hoàn toàn bằng tiếng Việt tự nhiên, hành văn chuyên nghiệp, ân cần. TUYỆT ĐỐI KHÔNG sử dụng tiếng Trung Quốc hoặc bất kỳ chữ Hán nào (như 阴, 阳, 稀释, 保持...). Tất cả các thuật ngữ phải được giải thích rõ bằng tiếng Việt thuần túy.
+            Không ghi lời chào, lời mở đầu hay kết bài, chỉ trả về nội dung 3 phần chi tiết ở trên.
             """
             try:
                 res_adv = self.qa_pipeline.client.chat(
@@ -444,9 +466,15 @@ class TCMFusionPipeline:
 
         if not explanation_advice:
             explanation_advice = (
-                "- Vui lòng nghỉ ngơi điều độ, tránh căng thẳng và giữ tinh thần thoải mái.\n"
-                "- Ăn uống thanh đạm, hạn chế thực phẩm nhiều dầu mỡ, cay nóng hoặc khó tiêu.\n"
-                "- Theo dõi sát sao các triệu chứng và đến cơ sở y tế gần nhất nếu có dấu hiệu bất thường."
+                "1. **Chế độ ăn uống (Dinh dưỡng biện chứng):**\n"
+                "   - Ăn chín uống sôi, dùng thức ăn ấm nóng, dễ tiêu hóa.\n"
+                "   - Tránh xa đồ ăn lạnh sống, nhiều dầu mỡ khó tiêu, cay nóng hoặc các chất kích thích để bảo vệ tỳ vị.\n"
+                "2. **Chế độ sinh hoạt và Nghỉ ngơi:**\n"
+                "   - Đi ngủ trước 23h để đảm bảo huyết hồi về can và thận được nghỉ ngơi.\n"
+                "   - Tránh làm việc quá sức, giữ tinh thần thư thái, hạn chế căng thẳng lo âu.\n"
+                "3. **Phương pháp tự chăm sóc và Tập luyện hỗ trợ:**\n"
+                "   - Tập thể dục nhẹ nhàng 30 phút mỗi ngày như đi bộ dưỡng sinh, tập khí công nhẹ nhàng.\n"
+                "   - Thực hiện xoa ấm vùng bụng quanh rốn theo chiều kim đồng hồ 50-100 lần trước khi ngủ để tăng cường tiêu hóa."
             )
 
         final_markdown += "### 3. Lời khuyên tổng quát\n"
