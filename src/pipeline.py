@@ -44,6 +44,8 @@ class TCMTonguePipeline:
         logger.info(f"Bắt đầu pipeline Vision. Lưỡi: {tongue_image_path}, Mặt: {face_image_path}")
         
         all_symptoms = []
+        tongue_desc = ""
+        face_desc = ""
 
         # Bước 1A: Xử lý ảnh Lưỡi (Nếu có)
         if tongue_image_path:
@@ -51,6 +53,7 @@ class TCMTonguePipeline:
             tongue_symptoms = self.ollama_client.diagnose_image(tongue_image_path, modality="tongue")
             if tongue_symptoms:
                 all_symptoms.extend(tongue_symptoms)
+                tongue_desc = tongue_symptoms[0]
 
         # Bước 1B: Xử lý ảnh Mặt (Nếu có)
         if face_image_path:
@@ -58,6 +61,7 @@ class TCMTonguePipeline:
             face_symptoms = self.ollama_client.diagnose_image(face_image_path, modality="face")
             if face_symptoms:
                 all_symptoms.extend(face_symptoms)
+                face_desc = face_symptoms[0]
 
         # Loại bỏ các triệu chứng bị trùng lặp (nếu cả 2 ảnh đều báo giống nhau)
         all_symptoms = list(set(all_symptoms))
@@ -67,7 +71,9 @@ class TCMTonguePipeline:
             return {
                 "error": "Không thể xác định triệu chứng",
                 "detected_symptoms": [],
-                "analysis": ""  # Trả về rỗng để Fusion Pipeline không bị lỗi
+                "analysis": "",  # Trả về rỗng để Fusion Pipeline không bị lỗi
+                "tongue_description": "",
+                "face_description": ""
             }
 
         # Bước 2: Tạo chuỗi phân tích chuẩn bị cho Tứ chẩn hợp tham
@@ -86,6 +92,8 @@ class TCMTonguePipeline:
 
         # Bước 4: Đóng gói kết quả (Thêm key 'analysis' quan trọng)
         result = {
+            "tongue_description": tongue_desc,
+            "face_description": face_desc,
             "detected_symptoms": all_symptoms,
             "possible_syndromes": syndromes,
             "treatments": treatments,
