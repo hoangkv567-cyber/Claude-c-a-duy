@@ -2,8 +2,15 @@ import pandas as pd
 import json
 from collections import defaultdict
 
+import yaml
+
+# Đọc cấu hình
+with open("config/config.yaml", "r", encoding="utf-8") as f:
+    config = yaml.safe_load(f)
+csv_path = config.get("dataset", {}).get("csv_path", "data/Medicine_clean.csv")
+
 # Đọc dataset
-df = pd.read_csv("data/tcm_data_600_clean.csv", encoding='utf-8')
+df = pd.read_csv(csv_path, encoding='utf-8')
 
 # Khởi tạo mapping
 mapping = defaultdict(set)

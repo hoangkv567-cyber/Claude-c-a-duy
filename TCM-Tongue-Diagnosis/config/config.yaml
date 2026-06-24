@@ -30,7 +30,7 @@ mapping:
 # Cấu hình dataset
 # ------------------------------------------------
 dataset:
-  csv_path: "data/tcm_data_600_clean.csv"        # File CSV chứa dữ liệu Đông y
+  csv_path: "data/Medicine_clean.csv"        # File CSV chứa dữ liệu Đông y
   image_folder: "data/raw"                       # Thư mục chứa ảnh lưỡi gốc
   processed_folder: "data/processed"             # Thư mục chứa ảnh đã xử lý
 

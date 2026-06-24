@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append("C:/Users/hoang/TTDN/TCM-Qwen-QA")
+sys.stdout.reconfigure(encoding='utf-8')
+
 import pandas as pd
 from neo4j import GraphDatabase
 from src.config_loader import load_config
