@@ -364,6 +364,70 @@ class TCMQA:
             logger.error(f"Lỗi thực thi Cypher: {e}\nCypher: {cypher}")
             return []
 
+    # ====================================================================
+    # [FIX] TRUY HỒI NHẤT QUÁN THEO ĐỒ THỊ (giữ đúng ngữ cảnh Bệnh–Hội chứng–Bài thuốc)
+    # Khắc phục 2 lỗi của pipeline web:
+    #   - "Sai bài thuốc": trước đây lấy LIMIT 1 bài thuốc bất kỳ của hội chứng dùng chung.
+    #   - "Thiếu kết quả": trước đây khớp '=' chính xác nên bỏ sót triệu chứng nằm trong node ghép.
+    # ====================================================================
+    @staticmethod
+    def _word_boundary_pattern(term: str) -> str:
+        """Tạo Java-regex khớp 'term' như một từ độc lập (tránh dính chuỗi con),
+        bắt được cả khi term nằm trong node triệu chứng ghép."""
+        # \Q...\E: trích dẫn nguyên văn, an toàn với ký tự đặc biệt như dấu ngoặc.
+        return r'.*(^|[^\p{L}])\Q' + term.lower() + r'\E($|[^\p{L}]).*'
+
+    def get_symptom_disease_map(self, terms: list) -> dict:
+        """Trả về {hội chứng: [danh sách bệnh]} mà triệu chứng người bệnh THỰC SỰ thuộc về.
+        Đi đúng đường đồ thị và ràng buộc r.benh_ly = b.name để loại các bệnh không liên quan."""
+        mapping = {}
+        for term in (terms or []):
+            if not term:
+                continue
+            pattern = self._word_boundary_pattern(term)
+            # CHẶT: bắt buộc r.benh_ly = b.name để cột chặt triệu chứng vào đúng bệnh của nó.
+            # (DB có ~49% cạnh benh_ly=NULL trùng lặp; nếu nới 'IS NULL OR' sẽ khớp tràn sang mọi
+            # bệnh dùng chung hội chứng. Đã kiểm chứng: 0 cặp (HC,triệu chứng) chỉ có bản NULL,
+            # nên ràng buộc chặt KHÔNG bỏ sót kết quả nào.)
+            cypher = """
+            MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[r:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
+            WHERE toLower(t.name) =~ $pattern AND r.benh_ly = b.name
+            RETURN DISTINCT h.name AS syndrome, b.name AS disease
+            """
+            try:
+                with self.driver.session() as session:
+                    for rec in session.run(cypher, pattern=pattern):
+                        if rec["syndrome"] and rec["disease"]:
+                            mapping.setdefault(rec["syndrome"], set()).add(rec["disease"])
+            except Exception as e:
+                logger.error(f"Lỗi get_symptom_disease_map (term='{term}'): {e}")
+        return {k: sorted(v) for k, v in mapping.items()}
+
+    def get_treatments_for_syndrome(self, syndrome: str, diseases: list = None) -> list:
+        """Trả về [{disease, bai_thuoc, vi_thuoc}] NHẤT QUÁN: mỗi bệnh đi kèm ĐÚNG bài thuốc của nó
+        (ràng buộc p.benh_ly = b.name AND p.hoi_chung = h.name). Nếu diseases=None thì lấy mọi bệnh."""
+        cypher = """
+        MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung {name: $syn})
+        WHERE $diseases IS NULL OR b.name IN $diseases
+        OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+          WHERE p.benh_ly = b.name AND p.hoi_chung = h.name
+        OPTIONAL MATCH (p)-[:BAO_GỒM]->(v:ViThuoc)
+        RETURN b.name AS disease, p.name AS bai_thuoc, collect(DISTINCT v.name) AS vi_thuoc
+        ORDER BY disease
+        """
+        out = []
+        try:
+            with self.driver.session() as session:
+                for rec in session.run(cypher, syn=syndrome, diseases=diseases):
+                    out.append({
+                        "disease": rec["disease"],
+                        "bai_thuoc": rec["bai_thuoc"],
+                        "vi_thuoc": [v for v in (rec["vi_thuoc"] or []) if v],
+                    })
+        except Exception as e:
+            logger.error(f"Lỗi get_treatments_for_syndrome ('{syndrome}'): {e}")
+        return out
+
     def _filter_results(self, records: list, terms: list) -> list:
         if not terms:
             return records

@@ -251,9 +251,11 @@ class TCMFusionPipeline:
 
     def _extract_syndromes_from_text(self, text: str) -> list:
         """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, kết hợp LLM dịch thuật/quy đổi từ khóa đối với câu phức tạp"""
+        # [FIX] Lưu lại các từ khóa triệu chứng đã dùng để bước truy hồi bài thuốc bám đúng ngữ cảnh bệnh.
+        self._last_extracted_terms = []
         if not text:
             return []
-        
+
         syndromes = []
         try:
             # Kiểm tra nếu câu chứa tiếng Anh (từ LLaVA face description)
@@ -263,6 +265,7 @@ class TCMFusionPipeline:
             # 1. Thử khớp triệu chứng chính xác từ database trước (Longest Match First)
             exact_symptoms = self.qa_pipeline._preprocess_question(text)
             if exact_symptoms:
+                self._last_extracted_terms = [s.lower() for s in exact_symptoms]
                 logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
                 symptoms_lower = [s.lower() for s in exact_symptoms]
                 cypher = f"""
@@ -393,7 +396,10 @@ class TCMFusionPipeline:
                             keywords.append(sym_l)
                             
                 logger.info(f"Từ khóa y khoa đã lọc sạch nhiễu và quy đổi: {keywords}")
-                
+
+                # [FIX] Lưu lại các từ khóa này để truy hồi bài thuốc đúng ngữ cảnh bệnh (khớp ranh giới từ)
+                self._last_extracted_terms = list(dict.fromkeys(keywords))
+
                 # Quét trực tiếp Database với các từ khóa
                 for kw in keywords:
                     cypher = f"""
@@ -542,9 +548,8 @@ class TCMFusionPipeline:
             syndrome = data["syndrome"]
             matching = data["matching_symptoms"]
             diseases = data["diseases"]
-            bai_thuoc = data["bai_thuoc"]
-            vi_thuoc = data["vi_thuoc"]
-            
+            treatments_by_disease = data.get("treatments_by_disease", [])
+
             final_markdown += f"#### Hội chứng: {syndrome}\n"
             
             # Chỉ dùng LLM để giải thích, CẤM kê đơn
@@ -575,10 +580,17 @@ class TCMFusionPipeline:
             # Trích dẫn thực thể thẳng từ Neo4j bằng Python
             if diseases:
                 final_markdown += f"- **Bệnh lý liên quan:** Nhóm bệnh **{', '.join(diseases)}** `(BenhLy)-[:CHIA_THÀNH]->(HoiChung)`\n"
-            
-            if bai_thuoc != "Chưa có dữ liệu":
-                final_markdown += f"- **Phương dược điều trị:** Bài thuốc **{bai_thuoc}** `(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`\n"
-                final_markdown += f"- **Thành phần vị thuốc:** Bao gồm **{vi_thuoc}** `(BaiThuoc)-[:BAO_GỒM]->(ViThuoc)`\n\n"
+
+            # [FIX - Sai bài thuốc] In bài thuốc ĐÚNG theo từng bệnh (không còn lấy bài thuốc tùy tiện)
+            if treatments_by_disease:
+                final_markdown += "- **Phương dược điều trị (đúng theo từng bệnh):**\n"
+                for tb in treatments_by_disease:
+                    final_markdown += (
+                        f"    - Bệnh **{tb['disease']}** → Bài thuốc **{tb['bai_thuoc']}** "
+                        f"(vị thuốc: {tb['vi_thuoc']}) "
+                        f"`(BenhLy)-[:CHIA_THÀNH]->(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`\n"
+                    )
+                final_markdown += "\n"
             else:
                 final_markdown += f"- **Phương dược điều trị:** Hiện chưa có bài thuốc cập nhật cho hội chứng này trong hệ thống.\n\n"
         # Thu thập danh sách tất cả các bệnh để sinh lời khuyên phù hợp
@@ -686,13 +698,39 @@ class TCMFusionPipeline:
 
         final_syndromes = self._extract_syndromes_from_text(combined_query) if combined_query else []
 
+        # [FIX - Thiếu kết quả] Bổ sung hội chứng theo đường đồ thị NHẤT QUÁN, khớp ranh giới từ
+        # (bắt được cả triệu chứng nằm trong node ghép). Đồng thời lưu lại bản đồ
+        # {hội chứng: [bệnh thực sự liên quan]} để bước lấy bài thuốc bên dưới dùng đúng ngữ cảnh.
+        # Dùng đúng các từ khóa mà bước trích xuất hội chứng đã sử dụng (cả khớp chính xác lẫn LLM).
+        search_terms = getattr(self, "_last_extracted_terms", []) or (
+            self.qa_pipeline._preprocess_question(combined_query) if combined_query else []
+        )
+        sym_disease_map = self.qa_pipeline.get_symptom_disease_map(search_terms) if search_terms else {}
+        for syn in sym_disease_map.keys():
+            if syn not in final_syndromes:
+                final_syndromes.append(syn)
+
+        # [FIX - Độ liên quan] Ưu tiên (deterministic) các hội chứng mà BỆNH của nó trùng/khớp tên
+        # với triệu chứng người bệnh nêu (vd câu "nôn mửa" -> luôn giữ bệnh "Nôn mửa"), để LLM
+        # thu hẹp không vô tình bỏ mất bệnh hiển nhiên nhất.
+        cq = combined_query.lower()
+        priority_syndromes = []
+        for syn, diseases in sym_disease_map.items():
+            for d in diseases:
+                d_clean = d.lower().replace("(ẩu thổ)", "").replace("bệnh", "").strip()
+                if d_clean and (d_clean in cq or any(d_clean == t or t in d_clean for t in search_terms)):
+                    priority_syndromes.append(syn)
+                    break
+
         if len(final_syndromes) > 1:
             symptoms_list = []
             if user_symptoms: symptoms_list.append(user_symptoms)
             if raw_vision_data and isinstance(raw_vision_data, dict):
                 symptoms_list.extend(raw_vision_data.get("detected_symptoms", []))
             if symptoms_list:
-                final_syndromes = self._filter_syndromes_with_llm(symptoms_list, final_syndromes)
+                narrowed = self._filter_syndromes_with_llm(symptoms_list, final_syndromes)
+                # Luôn giữ các hội chứng ưu tiên (khớp tên bệnh) lên đầu, rồi tới lựa chọn của LLM
+                final_syndromes = list(dict.fromkeys(priority_syndromes + narrowed))
 
         # === BẮT ĐẦU CHẶN KẾT QUẢ KHÔNG HỢP LỆ ===
         # Danh sách các hội chứng hợp lệ (bạn đã có trong prompts.py, copy vào đây)
@@ -808,41 +846,38 @@ class TCMFusionPipeline:
                         matching_patient_symptoms.append(s)
                 
                 try:
-                    diseases = self.qa_pipeline.neo4j_client.get_diseases_by_syndrome(syndrome)
-                    
-                    # Tìm bệnh lý phù hợp nhất trong số các bệnh lý của hội chứng này từ combined_query
-                    target_disease = None
-                    if diseases:
-                        for d in diseases:
-                            if d.lower() in combined_query.lower():
-                                target_disease = d
-                                break
-                        if not target_disease:
-                            for d in diseases:
-                                d_clean = d.lower().replace("bệnh", "").strip()
-                                if d_clean and d_clean in combined_query.lower():
-                                    target_disease = d
-                                    break
-                    
-                    treatment = self.qa_pipeline.neo4j_client.get_treatment_by_syndrome(syndrome, target_disease)
-                    if not treatment and target_disease:
-                        # Fallback nếu không có bài thuốc đặc hiệu cho bệnh lý đó
-                        treatment = self.qa_pipeline.neo4j_client.get_treatment_by_syndrome(syndrome)
-                    
-                    bai_thuoc = "Chưa có dữ liệu"
-                    vi_thuoc = "Chưa có dữ liệu"
-                    
-                    if treatment:
-                        treatments.append(treatment)
-                        bai_thuoc = treatment.get("bai_thuoc", "Chưa có dữ liệu")
-                        vi_thuoc = ", ".join(treatment.get("vi_thuoc", [])) if treatment.get("vi_thuoc") else "Chưa có dữ liệu"
+                    # [FIX - Sai bài thuốc & Bệnh quá rộng]
+                    # Chỉ giữ các BỆNH mà triệu chứng người bệnh THỰC SỰ thuộc về (theo đồ thị).
+                    # Nếu hội chứng đến từ ảnh/vision (không có triệu chứng văn bản khớp) -> lấy mọi bệnh.
+                    relevant_diseases = sym_disease_map.get(syndrome)  # None => toàn bộ bệnh của hội chứng
+                    treatment_rows = self.qa_pipeline.get_treatments_for_syndrome(syndrome, relevant_diseases)
+
+                    diseases = []
+                    treatments_by_disease = []
+                    for row in treatment_rows:
+                        d = row["disease"]
+                        if d and d not in diseases:
+                            diseases.append(d)
+                        # Mỗi bệnh đi kèm ĐÚNG bài thuốc của nó (nhất quán với DB)
+                        if row["bai_thuoc"]:
+                            vi_thuoc_str = ", ".join(row["vi_thuoc"]) if row["vi_thuoc"] else "Chưa có dữ liệu"
+                            treatments_by_disease.append({
+                                "disease": d,
+                                "bai_thuoc": row["bai_thuoc"],
+                                "vi_thuoc": vi_thuoc_str,
+                            })
+                            treatments.append({
+                                "hoi_chung": syndrome,
+                                "benh_ly": d,
+                                "bai_thuoc": row["bai_thuoc"],
+                                "vi_thuoc": row["vi_thuoc"],
+                            })
 
                     detailed_kg_data.append({
                         "syndrome": syndrome,
                         "matching_symptoms": matching_patient_symptoms,
                         "diseases": diseases,
-                        "bai_thuoc": bai_thuoc,
-                        "vi_thuoc": vi_thuoc
+                        "treatments_by_disease": treatments_by_disease,
                     })
                 except Exception as e:
                     logger.error(f"Lỗi truy xuất dữ liệu: {e}")
