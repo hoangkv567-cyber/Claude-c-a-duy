@@ -55,6 +55,27 @@ class TCMFusionPipeline:
             except Exception as e:
                 logger.error(f"Lỗi tải triệu chứng mặt từ mapping: {e}")
 
+        # [FIX vọng chẩn] Thu gọn danh sách ứng viên LƯỠI: thay vì đưa cả 3203 triệu chứng cho LLaVA,
+        # chỉ lấy các node triệu chứng LƯỠI/RÊU SẠCH của DB (~vài trăm). Vừa giúp map chính xác hơn,
+        # vừa đảm bảo triệu chứng map ra là node DB thật để bước truy hồi tìm được hội chứng/bài thuốc.
+        try:
+            with self.qa_pipeline.driver.session() as session:
+                rows = session.run(
+                    """
+                    MATCH (t:TrieuChung)
+                    WHERE (toLower(t.name) CONTAINS 'lưỡi' OR toLower(t.name) CONTAINS 'rêu')
+                      AND size(t.name) <= 22 AND NOT t.name CONTAINS ';'
+                      AND size(split(t.name, ' ')) <= 5
+                    RETURN DISTINCT t.name AS name
+                    """
+                )
+                db_tongue = [r["name"] for r in rows]
+            if db_tongue:
+                self.tongue_symptoms_list = db_tongue
+                logger.info(f"Đã nạp {len(db_tongue)} triệu chứng LƯỠI sạch từ DB cho bước map ảnh")
+        except Exception as e:
+            logger.error(f"Không nạp được triệu chứng lưỡi sạch từ DB, dùng danh sách mặc định: {e}")
+
         if not self.tongue_symptoms_list:
             self.tongue_symptoms_list = [
                 "Lưỡi bệu có dấu răng", "Rêu lưỡi trắng mỏng", "Lưỡi đỏ",
@@ -251,8 +272,9 @@ class TCMFusionPipeline:
 
     def _extract_syndromes_from_text(self, text: str) -> list:
         """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, kết hợp LLM dịch thuật/quy đổi từ khóa đối với câu phức tạp"""
-        # [FIX] Lưu lại các từ khóa triệu chứng đã dùng để bước truy hồi bài thuốc bám đúng ngữ cảnh bệnh.
+        # [FIX] Lưu lại các từ khóa triệu chứng + tên bệnh đã khớp để bước truy hồi bài thuốc bám đúng ngữ cảnh.
         self._last_extracted_terms = []
+        self._last_matched_diseases = []
         if not text:
             return []
 
@@ -287,11 +309,17 @@ class TCMFusionPipeline:
                 
                 db_diseases_sorted = sorted(db_diseases, key=len, reverse=True)
                 text_lower = text.lower()
+                import re
                 for disease in db_diseases_sorted:
-                    if len(disease.split()) < 2 and disease.lower() not in ["ho", "lao"]:
+                    dtoks = disease.lower().split()
+                    if len(dtoks) < 2 and disease.lower() not in ["ho", "lao"]:
                         continue
-                    import re
-                    pattern = rf'\b{re.escape(disease.lower())}\b'
+                    # Khớp tên bệnh độc lập; với tên 2 từ cho phép ĐẢO THỨ TỰ (đồng bộ với khớp triệu chứng)
+                    if len(dtoks) == 2:
+                        a, b = re.escape(dtoks[0]), re.escape(dtoks[1])
+                        pattern = rf'\b(?:{a}\s+{b}|{b}\s+{a})\b'
+                    else:
+                        pattern = rf'\b{re.escape(disease.lower())}\b'
                     if re.search(pattern, text_lower):
                         matched_diseases.append(disease)
             except Exception as ex:
@@ -307,6 +335,9 @@ class TCMFusionPipeline:
                         continue
                     filtered_diseases.append(disease)
                 matched_diseases = filtered_diseases
+
+            # Lưu lại để bước truy hồi bài thuốc giới hạn đúng vào bệnh người dùng đã nêu tên
+            self._last_matched_diseases = list(matched_diseases)
 
             if matched_diseases:
                 logger.info(f"Đã khớp bệnh lý chính xác từ database: {matched_diseases}")
@@ -710,9 +741,32 @@ class TCMFusionPipeline:
             if syn not in final_syndromes:
                 final_syndromes.append(syn)
 
-        # [FIX - Độ liên quan] Ưu tiên (deterministic) các hội chứng mà BỆNH của nó trùng/khớp tên
-        # với triệu chứng người bệnh nêu (vd câu "nôn mửa" -> luôn giữ bệnh "Nôn mửa"), để LLM
-        # thu hẹp không vô tình bỏ mất bệnh hiển nhiên nhất.
+        # [FIX vọng chẩn] Với triệu chứng phát hiện từ ẢNH (lưỡi/mặt), bổ sung hội chứng theo mapping
+        # curated (tri thức chuyên gia). Quan trọng cho chẩn MẶT vì nhiều đặc điểm sắc mặt KHÔNG phải
+        # node triệu chứng trong DB nên không suy luận được qua khớp văn bản. Hội chứng thêm vào vẫn bị
+        # bộ lọc DB (VALID_SYNDROMES) kiểm tra phía dưới nên an toàn (chỉ giữ hội chứng có thật).
+        if raw_vision_data and isinstance(raw_vision_data, dict):
+            detected = raw_vision_data.get("detected_symptoms", []) or []
+            if detected:
+                try:
+                    import json as _json, os as _os
+                    curated = {}
+                    for fn in ["symptom_to_syndrome.json", "face_to_syndrome.json"]:
+                        p = _os.path.join("data", "mapping", fn)
+                        if _os.path.exists(p):
+                            with open(p, "r", encoding="utf-8") as f:
+                                curated.update(_json.load(f))
+                    for sym in detected:
+                        for syn in curated.get(sym, []):
+                            if syn not in final_syndromes:
+                                final_syndromes.append(syn)
+                except Exception as e:
+                    logger.error(f"Lỗi bổ sung hội chứng từ mapping vọng chẩn: {e}")
+
+        # [FIX - Nhất quán & bớt lan man] Xếp hạng hội chứng theo cách XÁC ĐỊNH (deterministic),
+        # KHÔNG dùng LLM thu hẹp nữa (LLM cho kết quả khác nhau giữa "ngứa họng" và "họng ngứa").
+        # Cùng một triệu chứng -> luôn ra cùng kết quả, và chỉ giữ tối đa MAX_HC hội chứng liên quan nhất.
+        MAX_HC = 4
         cq = combined_query.lower()
         priority_syndromes = []
         for syn, diseases in sym_disease_map.items():
@@ -723,14 +777,16 @@ class TCMFusionPipeline:
                     break
 
         if len(final_syndromes) > 1:
-            symptoms_list = []
-            if user_symptoms: symptoms_list.append(user_symptoms)
-            if raw_vision_data and isinstance(raw_vision_data, dict):
-                symptoms_list.extend(raw_vision_data.get("detected_symptoms", []))
-            if symptoms_list:
-                narrowed = self._filter_syndromes_with_llm(symptoms_list, final_syndromes)
-                # Luôn giữ các hội chứng ưu tiên (khớp tên bệnh) lên đầu, rồi tới lựa chọn của LLM
-                final_syndromes = list(dict.fromkeys(priority_syndromes + narrowed))
+            # Khóa sắp xếp: (1) hội chứng khớp tên bệnh lên đầu; (2) hội chứng đặc hiệu hơn
+            # (ít bệnh dùng chung) trước; (3) theo tên để ổn định tuyệt đối.
+            def _rank_key(s):
+                in_map = s in sym_disease_map
+                return (
+                    0 if s in priority_syndromes else 1,
+                    len(sym_disease_map.get(s, [])) if in_map else 9999,
+                    s,
+                )
+            final_syndromes = sorted(dict.fromkeys(final_syndromes), key=_rank_key)[:MAX_HC]
 
         # === BẮT ĐẦU CHẶN KẾT QUẢ KHÔNG HỢP LỆ ===
         # Danh sách các hội chứng hợp lệ (bạn đã có trong prompts.py, copy vào đây)
@@ -847,10 +903,20 @@ class TCMFusionPipeline:
                 
                 try:
                     # [FIX - Sai bài thuốc & Bệnh quá rộng]
-                    # Chỉ giữ các BỆNH mà triệu chứng người bệnh THỰC SỰ thuộc về (theo đồ thị).
-                    # Nếu hội chứng đến từ ảnh/vision (không có triệu chứng văn bản khớp) -> lấy mọi bệnh.
-                    relevant_diseases = sym_disease_map.get(syndrome)  # None => toàn bộ bệnh của hội chứng
+                    # Chỉ giữ các BỆNH mà triệu chứng người bệnh THỰC SỰ thuộc về (theo đồ thị),
+                    # gộp thêm bệnh người dùng nêu đích danh (matched_diseases). get_treatments_for_syndrome
+                    # tự lọc bỏ bệnh không thuộc hội chứng nên gộp dư cũng an toàn.
+                    # Nếu hội chứng đến từ ảnh/vision (không có bệnh nào khớp) -> lấy mọi bệnh.
+                    rel = set(sym_disease_map.get(syndrome, []))
+                    rel.update(getattr(self, "_last_matched_diseases", []) or [])
+                    relevant_diseases = sorted(rel) if rel else None  # None => toàn bộ bệnh của hội chứng
                     treatment_rows = self.qa_pipeline.get_treatments_for_syndrome(syndrome, relevant_diseases)
+
+                    # [FIX - bớt lan man] Khi KHÔNG thể thu hẹp theo triệu chứng (vd hội chứng từ ảnh
+                    # vọng chẩn dùng chung nhiều bệnh) -> chỉ hiển thị tối đa MAX_BENH bệnh tiêu biểu.
+                    MAX_BENH = 6
+                    if relevant_diseases is None and len(treatment_rows) > MAX_BENH:
+                        treatment_rows = treatment_rows[:MAX_BENH]
 
                     diseases = []
                     treatments_by_disease = []

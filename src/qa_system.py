@@ -258,15 +258,22 @@ class TCMQA:
         
         for symptom in db_symptoms_sorted:
             sym_l = symptom.lower()
-            if len(sym_l.split()) < 2:
+            toks = sym_l.split()
+            if len(toks) < 2:
                 continue
-            # Dùng regex \b để khớp từ độc lập tránh substring trượt
-            pattern = rf'\b{re.escape(sym_l)}\b'
+            # Dùng regex \b để khớp từ độc lập tránh substring trượt.
+            # Với triệu chứng ĐÚNG 2 TỪ: chấp nhận ĐẢO THỨ TỰ (vd DB 'họng ngứa' khớp cả
+            # khi người dùng gõ 'ngứa họng') để vấn chẩn không phụ thuộc thứ tự từ.
+            if len(toks) == 2:
+                a, b = re.escape(toks[0]), re.escape(toks[1])
+                pattern = rf'\b(?:{a}\s+{b}|{b}\s+{a})\b'
+            else:
+                pattern = rf'\b{re.escape(sym_l)}\b'
             if re.search(pattern, temp_text):
                 extracted.append(symptom)
-                # Thay bằng khoảng trắng cùng chiều dài để tránh các cụm từ khác đè trùng
+                # Thay bằng khoảng trắng để tránh các cụm từ khác đè trùng
                 temp_text = re.sub(pattern, " " * len(sym_l), temp_text, count=1)
-                
+
         return extracted
 
     def _preprocess_question(self, question: str) -> list:
@@ -372,10 +379,19 @@ class TCMQA:
     # ====================================================================
     @staticmethod
     def _word_boundary_pattern(term: str) -> str:
-        """Tạo Java-regex khớp 'term' như một từ độc lập (tránh dính chuỗi con),
-        bắt được cả khi term nằm trong node triệu chứng ghép."""
+        """Tạo Java-regex khớp 'term' như một cụm từ độc lập (tránh dính chuỗi con),
+        bắt được cả khi term nằm trong node triệu chứng ghép.
+        Với cụm ĐÚNG 2 TỪ: cho phép ĐẢO THỨ TỰ (vd 'ngứa họng' khớp cả node 'họng ngứa')
+        để vấn chẩn không phụ thuộc thứ tự từ người dùng gõ."""
         # \Q...\E: trích dẫn nguyên văn, an toàn với ký tự đặc biệt như dấu ngoặc.
-        return r'.*(^|[^\p{L}])\Q' + term.lower() + r'\E($|[^\p{L}]).*'
+        t = term.lower().strip()
+        toks = t.split()
+        if len(toks) == 2:
+            a, b = toks
+            core = r'(\Q' + a + r'\E \Q' + b + r'\E|\Q' + b + r'\E \Q' + a + r'\E)'
+        else:
+            core = r'\Q' + t + r'\E'
+        return r'(?s).*(^|[^\p{L}])' + core + r'($|[^\p{L}]).*'
 
     def get_symptom_disease_map(self, terms: list) -> dict:
         """Trả về {hội chứng: [danh sách bệnh]} mà triệu chứng người bệnh THỰC SỰ thuộc về.
