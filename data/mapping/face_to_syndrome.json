@@ -1,24 +1,1232 @@
 {
-  "Mặt đỏ": ["Can dương thượng kháng", "Can uất hóa hỏa", "Âm hư hỏa vượng", "Phong nhiệt", "Nhiệt độc thịnh"],
-  "hai gò má đỏ": ["Âm hư", "Vị nhiệt"],
-  "Mặt trắng nhợt": ["Khí huyết khuy hư", "Tâm tỳ lưỡng hư", "Huyết hư"],
-  "Mặt nhợt nhạt": ["Khí huyết khuy hư", "Tâm tỳ lưỡng hư", "Huyết hư"],
-  "Mặt vàng": ["Tỳ vị hư nhược", "Thấp nhiệt uẩn kết", "Hoàng đản"],
-  "Mặt xanh": ["Phong hàn", "Hàn thấp", "Can uất khí trệ"],
-  "Mặt đen": ["Ứ huyết trở lạc", "Thận dương hư", "Huyết ứ nội kết"],
-  "Mặt phù": ["Thận dương hư", "Tỳ dương hư", "Phong thủy tướng bác"],
-  "Mặt xám ngoét": ["Tâm dương bạo thoát", "Khí dương bạo thoát"],
-  "Sắc mặt ám tối": ["Tỳ thận dương hư", "Ứ huyết trở lạc"],
-  "Mặt có ban": ["Huyết nhiệt vọng hành", "Âm hư hỏa vượng", "Huyết nhiệt"],
-  "Ban xuất huyết dưới da": ["Huyết nhiệt vọng hành", "Nhiệt độc thịnh"],
-  "Da xuất hiện ban đỏ hình bướm": ["Huyết nhiệt vọng hành", "Âm hư hỏa vượng"],
-  "Da có mảng đỏ có vảy": ["Phong nhiệt huyết táo", "Thấp nhiệt uẩn kết"],
-  "Da nổi mụn nước": ["Thấp nhiệt", "Thấp nhiệt uẩn kết"],
-  "Da ngứa": ["Phong nhiệt", "Thấp nhiệt", "Huyết hư phong táo"],
-  "Da khô": ["Huyết hư phong táo", "Âm hư", "Phế âm hư"],
-  "Mắt đỏ": ["Can dương thượng kháng", "Can uất hóa hỏa", "Phong nhiệt"],
-  "Mắt lồi": ["Can uất hỏa uất", "Âm hư hỏa uất"],
-  "Môi méo": ["Phong tà trúng lạc", "Khí hư huyết ứ"],
-  "Môi thâm": ["Ứ huyết trở lạc", "Tâm huyết ứ trở", "Huyết ứ nội kết"],
-  "Mặt trắng nhơt": ["Khí huyết khuy hư", "Tâm tỳ lưỡng hư", "Huyết hư"]
+  "Mặt đỏ": [
+    "Ngoại cảm thấp nhiệt (Châm cứu)",
+    "Can dương thượng kháng",
+    "Hỏa thương âm",
+    "Can uất hóa hỏa",
+    "Can Dương Thượng Cang",
+    "Tâm hoả vọng động (Viêm đường tiết niệu cấp)",
+    "Tỳ vị âm hư (Âm hư)",
+    "Vị nhiệt",
+    "Âm hư dương thịnh",
+    "Sốt cao",
+    "Chính ngược",
+    "Nhiệt độc thịnh",
+    "Phong Dương Nội Động",
+    "Âm hư hỏa vượng",
+    "Can phong",
+    "Can uất hoá hoả",
+    "Đàm ứ uất kết",
+    "Can dương thịnh",
+    "Tâm Hoả Vượng",
+    "Phong nhiệt",
+    "Đàm hỏa nghịch"
+  ],
+  "hai gò má đỏ": [
+    "Vị nhiệt",
+    "Âm hư"
+  ],
+  "Mặt trắng nhợt": [
+    "Khí huyết khuy hư",
+    "Tâm tỳ lưỡng hư",
+    "Huyết hư"
+  ],
+  "Mặt nhợt nhạt": [
+    "Khí huyết khuy hư",
+    "Tâm tỳ lưỡng hư",
+    "Huyết hư"
+  ],
+  "Mặt vàng": [
+    "Thấp nhiệt uẩn kết",
+    "Can huyết hư",
+    "Hoàng đản",
+    "Tỳ vị hư nhược",
+    "Tâm tỳ hư"
+  ],
+  "Mặt xanh": [
+    "Phong hàn",
+    "Hàn thấp",
+    "Can uất khí trệ"
+  ],
+  "Mặt đen": [
+    "Ứ huyết trở lạc",
+    "Thận dương hư",
+    "Huyết ứ nội kết"
+  ],
+  "Mặt phù": [
+    "Tỳ dương hư",
+    "Thận hư",
+    "Thận dương hư",
+    "Tâm thận dương hư",
+    "Phong thủy tướng bác",
+    "Dương khí hư"
+  ],
+  "Mặt xám ngoét": [
+    "Tâm dương bạo thoát",
+    "Khí dương bạo thoát"
+  ],
+  "Sắc mặt ám tối": [
+    "Can thận hư",
+    "Ứ huyết trở lạc",
+    "Tỳ thận dương hư"
+  ],
+  "Mặt có ban": [
+    "Huyết nhiệt vọng hành",
+    "Âm hư hỏa vượng",
+    "Huyết nhiệt"
+  ],
+  "Ban xuất huyết dưới da": [
+    "Huyết nhiệt vọng hành",
+    "Nhiệt độc thịnh"
+  ],
+  "Da xuất hiện ban đỏ hình bướm": [
+    "Huyết nhiệt vọng hành",
+    "Âm hư hỏa vượng"
+  ],
+  "Da có mảng đỏ có vảy": [
+    "Phong nhiệt huyết táo",
+    "Thấp nhiệt uẩn kết"
+  ],
+  "Da nổi mụn nước": [
+    "Thấp nhiệt",
+    "Thấp nhiệt uẩn kết"
+  ],
+  "Da ngứa": [
+    "Phong nhiệt",
+    "Thấp nhiệt",
+    "Huyết hư phong táo"
+  ],
+  "Da khô": [
+    "Huyết hư phong táo",
+    "Âm hư",
+    "Phế âm hư"
+  ],
+  "Mắt đỏ": [
+    "Âm hư huyết ứ",
+    "Can dương thượng kháng",
+    "Can uất hóa hỏa",
+    "Can Dương Thượng Cang",
+    "Can uất hoá hoả",
+    "Can hoả",
+    "Can uất",
+    "Can dương thịnh",
+    "Phong nhiệt",
+    "Can hỏa",
+    "Đàm hỏa nghịch"
+  ],
+  "Mắt lồi": [
+    "Can uất hỏa uất",
+    "Âm hư hỏa uất"
+  ],
+  "Môi méo": [
+    "Phong tà trúng lạc",
+    "Khí hư huyết ứ"
+  ],
+  "Môi thâm": [
+    "Huyết ứ nội kết",
+    "Ứ huyết trở lạc",
+    "Tâm huyết ứ trở",
+    "Khí trệ huyết ứ"
+  ],
+  "Mặt trắng nhơt": [
+    "Khí huyết khuy hư",
+    "Tâm tỳ lưỡng hư",
+    "Huyết hư"
+  ],
+  "sắc mặt nhợt": [
+    "Tỳ thận dương hư"
+  ],
+  "chóng mặt": [
+    "Vị thấp nhiệt",
+    "Giai đoạn cuối (can thận âm hư)",
+    "Âm hư nhiệt kết",
+    "Can Dương Thượng Cang",
+    "Thận âm hư - Âm hư nội nhiệt",
+    "Tâm tỳ lưỡng hư",
+    "Can thận âm hư",
+    "Can Hoả Phạm Phế",
+    "Âm Hư Hỏa Vượng",
+    "Can âm hư (Âm hư)",
+    "Đờm trở huyết ứ (xơ cứng động mạch não)",
+    "Âm hư thận hư kèm thấp nhiệt",
+    "Can Thận Âm Hư kèm Đờm Trệ",
+    "Can thận âm hư, Can phong thịnh (xơ cứng động mạch não)",
+    "Âm hư hỏa vượng (phương 2)",
+    "Huyết hư hàn ngưng",
+    "Huyết hư",
+    "Âm hư huyết ứ",
+    "Can dương thượng cang (Can uất hoả vượng)",
+    "Can nhiệt",
+    "Thận hư không bền (Dương hư)",
+    "Ẩm ứ đọng ở trường vị (Đàm ẩm)",
+    "Âm hư dương xung",
+    "Thận âm hư - Âm hư can vượng",
+    "Can thận hư",
+    "Đàm ẩm",
+    "Can dương thượng cang",
+    "Thể mãn tính - Thận hư (âm hư hỏa viêm)",
+    "Chứng tỳ thận lưỡng hư",
+    "Khí huyết đều hư (xơ cứng động mạch não)",
+    "Âm hư phong động",
+    "Khí Bất Nhiếp Huyết",
+    "Di chứng (Ứ tắc não lạc - Can phong)",
+    "Khí huyết lưỡng hư (tỳ thận hao tổn)",
+    "Phong Dương Nội Động",
+    "Can dương thượng cang / Can hỏa vượng",
+    "Tỳ thận hư (khí huyết bất túc)",
+    "Âm hư hỏa vượng",
+    "Khí huyết hư",
+    "Âm hư nhiệt độc",
+    "Âm hư thấp nhiệt",
+    "Khí Huyết Đều Hư",
+    "Ẩm tà ứ đọng ở bàng quang",
+    "Thể âm hư dương xung",
+    "Tỳ thận hư (thiếu máu không tái tạo)",
+    "Âm dương câu hư",
+    "Khí hư thận hư (thiếu máu mạn tính)"
+  ],
+  "mắt không còn thần": [
+    "Can Thận Âm Hư kèm Đờm Trệ"
+  ],
+  "da mặt kém tươi": [
+    "Can Thận Âm Hư kèm Đờm Trệ"
+  ],
+  "khó cử động miệng và mắt": [
+    "Can Dương Thượng Cang"
+  ],
+  "môi đỏ": [
+    "Ứ huyết (Thực chứng)",
+    "Huyết nhiệt",
+    "Cổ trướng do (Thấp) nhiệt uất huyết ứ",
+    "Âm hư dương xung",
+    "Thể âm hư dương xung",
+    "Khí trệ huyết ứ",
+    "Tâm Hoả Vượng"
+  ],
+  "da mặt vàng bủng": [
+    "Đờm mê tâm Khiếu"
+  ],
+  "hoa mắt chóng mặt": [
+    "Chứng não hải bất túc",
+    "Huyết hư ma mộc",
+    "Tỳ hư",
+    "Âm hư",
+    "Can hỏa thịnh"
+  ],
+  "hai mắt tối đen": [
+    "Chứng huyết ứ nội trở"
+  ],
+  "Khối u bề mặt trơn": [
+    "Khí trệ đờm ngưng"
+  ],
+  "nôn ra đờm dãi tanh hôi hoặc mủ máu": [
+    "Giai đoạn nung mủ"
+  ],
+  "ho ói ra mủ máu hoặc như nước cơm": [
+    "Giai đoạn vỡ mủ"
+  ],
+  "Thời kỳ mưng mủ và vỡ mủ (khạc nhiều máu mủ": [
+    "Kinh nghiệm dân gian"
+  ],
+  "mặt phù thũng nhẹ": [
+    "Ẩm tà hại phế (Chi ẩm)"
+  ],
+  "hoa mắt": [
+    "Thận âm hư",
+    "Phong đờm ứ huyết",
+    "Giai đoạn cuối (can thận âm hư)",
+    "Can Thận Hư Tổn",
+    "Thận âm hư - Âm hư nội nhiệt",
+    "Can Thận âm hư",
+    "Tâm tỳ lưỡng hư",
+    "Âm hư dương thịnh",
+    "Can kinh thấp nhiệt",
+    "Tuỷ Hải Bất Túc",
+    "Âm Hư Hỏa Vượng",
+    "Thận hư",
+    "Khí âm lưỡng hư",
+    "Tâm tỳ đều hư (Châm cứu)",
+    "Khí huyết lưỡng hư (tỳ thận hao tổn)",
+    "Tỳ thận hư (khí huyết bất túc)",
+    "Âm hư hỏa vượng",
+    "Khí huyết hư",
+    "Âm hư hỏa vượng (phương 2)",
+    "Âm hư nhiệt độc",
+    "Tâm tỳ đều hư",
+    "Đờm nhiệt",
+    "Khí huyết hư suy",
+    "Ẩm ứ đọng ở trường vị (Đàm ẩm)",
+    "Can Thận Âm Hư",
+    "Ẩm tà ứ đọng ở bàng quang",
+    "Thấp nhiệt",
+    "Tỳ thận hư (thiếu máu không tái tạo)",
+    "Âm hư huyết táo (kinh nghiệm)",
+    "Can huyết hư (Huyết hư)",
+    "Can dương thượng cang",
+    "Thể mãn tính - Thận hư (âm hư hỏa viêm)",
+    "Đờm Nhiệt Động Phong",
+    "Khí hư thận hư (thiếu máu mạn tính)"
+  ],
+  "mắt khô dính": [
+    "Can thận suy tổn"
+  ],
+  "đau hoặc ứ máu tại chỗ": [
+    "Huyết ứ"
+  ],
+  "lưỡi bình thường hoặc có vết ứ máu": [
+    "Huyết ứ"
+  ],
+  "Trên mặt âm hành có nốt hạch": [
+    "Đờm Trọc Ngưng Kết"
+  ],
+  "da mặt không tươi": [
+    "Khí hư"
+  ],
+  "kèm hoa mắt": [
+    "Huyết táo (Can thận âm hư)"
+  ],
+  "mặt nặng": [
+    "Tỳ hư thấp trệ"
+  ],
+  "khát thích uống nước mát": [
+    "Vị thấp nhiệt"
+  ],
+  "sắc kinh đen có máu cục": [
+    "Khí trệ huyết ứ"
+  ],
+  "hoặc mí mắt phù": [
+    "Tỳ Thận dương hư"
+  ],
+  "sắc mặt vàng": [
+    "Khí hư",
+    "Tâm tỳ hư",
+    "Vị nhiệt",
+    "Tỳ vị hư hàn",
+    "Khí uất",
+    "Tỳ hư"
+  ],
+  "2 gò má đỏ": [
+    "Vị nhiệt"
+  ],
+  "sắc mặt vàng úa": [
+    "Huyết hư",
+    "Tỳ hư không kiện vận"
+  ],
+  "hay hoa chóng mặt": [
+    "Huyết hư"
+  ],
+  "sắc mặt trắng": [
+    "Huyết hư",
+    "Tỳ hư",
+    "Âm hư",
+    "Âm dương đều hư (phương 2)",
+    "Âm dương đều hư",
+    "Hen hàn",
+    "Khí huyết hư",
+    "Phế khí hư"
+  ],
+  "ho khan hoặc khạc ra máu": [
+    "Âm hư"
+  ],
+  "Gò má đỏ từng lúc": [
+    "Âm hư hoả vượng"
+  ],
+  "sắc mặt xanh tối": [
+    "Huyết ứ"
+  ],
+  "chảy máu chân răng và dưới da": [
+    "Nhiệt độc và huyết nhiệt (Giai đoạn cấp)"
+  ],
+  "Sắc mặt trắng bệch": [
+    "Khí huyết đều hư",
+    "Tâm tỳ hư",
+    "Vết mổ không lành",
+    "Khí hư (Giai đoạn mãn)",
+    "Khí huyết đều hư (Thời kỳ cuối)",
+    "Dương khí hư",
+    "Xơ cứng động mạch vành (tâm tỳ hư)",
+    "Khí âm đều hư (Giai đoạn mãn)"
+  ],
+  "có mảng thâm quầng trên mặt lưỡi": [
+    "Huyết táo"
+  ],
+  "ngạt mũi": [
+    "Phong hàn",
+    "Phong hàn (giai đoạn đầu)"
+  ],
+  "chảy nước mũi": [
+    "Phong hàn",
+    "Phong hàn (giai đoạn đầu)"
+  ],
+  "mũi khô": [
+    "Phong nhiệt"
+  ],
+  "có thể chảy máu cam": [
+    "Phong nhiệt"
+  ],
+  "Mắt cận": [
+    "Can thận hư",
+    "Dương khí hư yếu - tiên thiên bất túc"
+  ],
+  "mắt mỏi": [
+    "Can thận hư",
+    "Dương khí hư yếu - tiên thiên bất túc"
+  ],
+  "đầu váng mắt hoa": [
+    "Huyết hư",
+    "Can huyết hư"
+  ],
+  "da thịt máy động": [
+    "Huyết hư"
+  ],
+  "mặt môi nhạt": [
+    "Huyết hư"
+  ],
+  "mắt vàng": [
+    "Cổ trướng do (Thấp) nhiệt uất huyết ứ",
+    "Thấp nhiệt uẩn kết"
+  ],
+  "mặt vàng xám": [
+    "Cổ trướng do (Thấp) nhiệt uất huyết ứ",
+    "Cổ trướng do Âm hư huyết ứ"
+  ],
+  "Sắc mặt vàng tối": [
+    "Cổ trướng do Âm hư thấp nhiệt"
+  ],
+  "miệng khô môi đỏ": [
+    "Cổ trướng do Âm hư huyết ứ",
+    "Cổ trướng do Âm hư thấp nhiệt"
+  ],
+  "chảy máu cam": [
+    "Sốt cao",
+    "Hư nhiệt",
+    "Cổ trướng do Âm hư thấp nhiệt"
+  ],
+  "chảy máu chân răng": [
+    "Cổ trướng do Âm hư thấp nhiệt"
+  ],
+  "chân răng có khi chảy máu hoặc máu cam": [
+    "Cổ trướng do Âm hư huyết ứ"
+  ],
+  "sắc mặt vàng xanh nhợt": [
+    "Cổ trướng do Tỳ thận dương hư"
+  ],
+  "mặt tái": [
+    "Thấp nhiệt uất kết (Thạch lâm)"
+  ],
+  "tiểu ra máu. Đau đứng ngồi không yên.": [
+    "Thấp nhiệt uất kết (Thạch lâm)"
+  ],
+  "hai mắt giận dữ": [
+    "Đàm hỏa nghịch"
+  ],
+  "tiểu tiện khó khăn kèm theo váng đầu chóng mặt": [
+    "Âm hư"
+  ],
+  "mặt đỏ ửng": [
+    "Can hỏa thịnh"
+  ],
+  "chảy máu tươi": [
+    "Cấp tính - Thấp nhiệt"
+  ],
+  "mặt": [
+    "Mãn tính - Phong huyết táo"
+  ],
+  "Ngứa ở hai má": [
+    "Phong thấp nhiệt độc (Thể ướt)",
+    "Phong thấp nhiệt độc (Thể khô)"
+  ],
+  "Chảy máu mũi lượng nhiều": [
+    "Huyết nhiệt (Bài 2)",
+    "Huyết nhiệt (Bài 1)"
+  ],
+  "chảy máu chân răng rỉ rả có khi chảy cả máu tai": [
+    "Huyết nhiệt (Bài 2)",
+    "Huyết nhiệt (Bài 1)"
+  ],
+  "mũi ráo. Nặng thì răng lung lay": [
+    "Huyết nhiệt (Bài 2)",
+    "Huyết nhiệt (Bài 1)"
+  ],
+  "Lượng huyết ra đằng mũi khá nhiều": [
+    "Vị nhiệt (thiên về vị)",
+    "Phế nhiệt (thiên về phế)"
+  ],
+  "có thêm các chứng mũi khô ráo và đau": [
+    "Vị nhiệt (thiên về vị)",
+    "Phế nhiệt (thiên về phế)"
+  ],
+  "mặt mắt đỏ.": [
+    "Nhiệt kết"
+  ],
+  "Chảy máu cam tái phát nhiều lần": [
+    "Âm hư hỏa vượng"
+  ],
+  "Như chứng khí huyết hư có kèm chứng trạng mặt nhạt": [
+    "Thận dương hư"
+  ],
+  "hoặc sau khi ốm bị chảy máu cam.": [
+    "Thận dương hư"
+  ],
+  "Máu đỏ tươi": [
+    "Vị hoả"
+  ],
+  "Chân răng chảy máu đỏ tối": [
+    "Âm hư"
+  ],
+  "Kẽ răng chảy máu": [
+    "Can hoả"
+  ],
+  "mặt mắt đỏ": [
+    "Can hoả"
+  ],
+  "Chảy máu chân răng lâu ngày": [
+    "Dương hư"
+  ],
+  "mặt nhợt": [
+    "Dương hư"
+  ],
+  "Mắt cảm thấy kệnh vướng": [
+    "Giai đoạn viêm nhiễm (Phong nhiệt độc)"
+  ],
+  "mi mắt mọc mụn dính vào mi": [
+    "Giai đoạn viêm nhiễm (Phong nhiệt độc)"
+  ],
+  "Mi mắt sưng kệnh": [
+    "Giai đoạn hoá mủ (Chính hư tà lưu)"
+  ],
+  "sắc mặt trắng nhợt": [
+    "Huyết hư có hàn (Thiên thực)",
+    "Huyết hư có hàn (Thiên huyết hư)"
+  ],
+  "sắc mặt xanh trắng": [
+    "Huyết hư hàn ngưng"
+  ],
+  "Thủ túc ma mộc kèm tê bì một bên mặt": [
+    "Phong tà nhập lạc"
+  ],
+  "sắc mặt môi trắng nhạt": [
+    "Huyết hư ma mộc"
+  ],
+  "Chân tay tê bì kèm môi miệng xanh tím": [
+    "Ứ huyết trở lạc"
+  ],
+  "sắc mặt không tươi": [
+    "Tỳ hư thấp khốn",
+    "Tâm tỳ đều hư (Châm cứu)",
+    "Khí Bất Nhiếp Huyết",
+    "Tâm tỳ hư",
+    "Tỳ Hư Thấp Khốn",
+    "Khí huyết hư",
+    "Tâm thận tỳ hư"
+  ],
+  "đầu váng hoa mắt": [
+    "Can thận hư tổn",
+    "Tỳ Hư Ứ Huyết"
+  ],
+  "mắt mờ tai ù": [
+    "Can thận hư tổn"
+  ],
+  "sắc mặt trắng nhạt": [
+    "Khí hư",
+    "Hàn",
+    "Khí quyết (khí hư)"
+  ],
+  "có thể nứt chảy máu)": [
+    "Huyết táo (Huyết hư phong táo)"
+  ],
+  "sắc mặt xanh nhợt": [
+    "Thận hư không bền (Dương hư)",
+    "Ứ huyết (Hư chứng)"
+  ],
+  "Đái ra máu": [
+    "Tâm hoả vọng động (Viêm đường tiết niệu cấp)"
+  ],
+  "mạch tế sác. (Hoặc tiểu tiện sẻn đỏ lẫn máu": [
+    "Âm hư hoả vượng (Viêm nhiễm mãn tính)"
+  ],
+  "Đái ra máu và các triệu chứng đau quặn do sỏi": [
+    "Huyết ứ (Thường gặp trong sỏi tiết niệu)"
+  ],
+  "Tiểu tiện nhiều lần có lẫn máu": [
+    "Tâm tỳ hư"
+  ],
+  "sắc mặt xạm khô": [
+    "Thận dương hư"
+  ],
+  "váng đầu chóng mặt": [
+    "Thận dương hư"
+  ],
+  "gò má đỏ": [
+    "Âm hư huyết ứ",
+    "Âm Hư Hoả Vượng",
+    "Tâm âm hư (Âm hư)",
+    "Âm hư nội nhiệt"
+  ],
+  "ho khan hoặc trong đờm có lẫn sợi máu": [
+    "Âm hư nội nhiệt"
+  ],
+  "nôn ra máu": [
+    "Huyết ứ nội trở, can lạc bất thông (xơ gan)",
+    "Tham khảo 4 (ưu uất khí kết, khí trệ huyết ứ)",
+    "Ứ huyết (Thực chứng)"
+  ],
+  "môi nhạt": [
+    "Xơ cứng động mạch vành (tâm tỳ hư)",
+    "Khí huyết hư",
+    "Ứ huyết (Hư chứng)",
+    "Tâm tỳ hư"
+  ],
+  "sợ lạnh ngạt mũi": [
+    "Phong hàn"
+  ],
+  "mặt và mắt đỏ": [
+    "Phong nhiệt"
+  ],
+  "hoa mắt sợ sáng": [
+    "Can dương thượng cang / Can hỏa vượng",
+    "Can dương thượng cang (Can uất hoả vượng)"
+  ],
+  "mắt đỏ miệng khô": [
+    "Can dương thượng cang / Can hỏa vượng",
+    "Can dương thượng cang",
+    "Can dương thượng cang (Can uất hoả vượng)"
+  ],
+  "Mặt mày sây sẩy": [
+    "Đàm thấp (Uất đờm)",
+    "Uất đờm"
+  ],
+  "đau lan tới má và răng": [
+    "Phong hoả nội động"
+  ],
+  "nặng thì cơ vùng mặt co kéo": [
+    "Phong hoả nội động"
+  ],
+  "mặt và lưỡi đỏ": [
+    "Phong nhiệt đàm"
+  ],
+  "Đại tiện ra máu": [
+    "Khí hư",
+    "Khí hư uất nhiệt",
+    "Thấp nhiệt"
+  ],
+  "Trong phân lẫn máu": [
+    "Thấp nhiệt (kèm khí trệ)"
+  ],
+  "sắc máu không tươi": [
+    "Thấp nhiệt (kèm khí trệ)"
+  ],
+  "đại tiện không thoải mái": [
+    "Thấp nhiệt (kèm khí trệ)"
+  ],
+  "Đại tiện ra máu lâu ngày": [
+    "Tỳ dương hư"
+  ],
+  "sắc mặt xanh nhạt": [
+    "Phong đàm"
+  ],
+  "trợn mắt": [
+    "Phong đàm",
+    "Âm hư hỏa vượng – tâm thận bất giao"
+  ],
+  "hoặc sau tai biến mạch máu não": [
+    "Huyết ứ"
+  ],
+  "sắc mặt xạm": [
+    "Khí trệ huyết ứ",
+    "Tỳ hư"
+  ],
+  "Sắc mặt xanh": [
+    "Dương hư ứ trệ"
+  ],
+  "nhức mắt": [
+    "Âm hư dương cang",
+    "Sốt cao",
+    "Can uất"
+  ],
+  "mắt căng": [
+    "Âm hư dương cang"
+  ],
+  "Dùng ngoài tra mắt cho bệnh Glôcôm": [
+    "Dùng ngoài"
+  ],
+  "sắc mặt tối": [
+    "Ứ đàm"
+  ],
+  "ho ra máu": [
+    "Đờm nhiệt ủng phế (thời kỳ cấp diễn)"
+  ],
+  "trong đờm có sợi máu": [
+    "Khí âm hư (thời kỳ ổn định)"
+  ],
+  "mặt môi đỏ": [
+    "Hen nhiệt"
+  ],
+  "ngạt mũi chảy nước mũi": [
+    "Phế khí hư"
+  ],
+  "nếu ho nhiều có thể ra máu": [
+    "Đờm nhiệt (Giai đoạn ho cơn thường)"
+  ],
+  "mí mắt nề": [
+    "Đờm nhiệt (Giai đoạn ho cơn thường)"
+  ],
+  "mũi nghẹt": [
+    "Phong Hàn Phạm Phế",
+    "Đờm nhiệt nội bế thanh khiếu"
+  ],
+  "trong đờm có máu": [
+    "Phong Hàn Phạm Phế"
+  ],
+  "trong đờm có lẫn máu tươi": [
+    "Phong Nhiệt Phạm Phế"
+  ],
+  "trong đờm có lẫn máu hoặc ho ra máu": [
+    "Táo Nhiệt Thương Phế"
+  ],
+  "mũi và họng khô": [
+    "Táo Nhiệt Thương Phế"
+  ],
+  "đờm có lẫn máu hoặc ho khạc ra máu tươi": [
+    "Can Hoả Phạm Phế"
+  ],
+  "trong đờm có máu hoặc ho ra máu tươi": [
+    "Âm Hư Hoả Vượng"
+  ],
+  "trong đờm có máu hoặc máu ra thành sợi": [
+    "Khí Bất Nhiếp Huyết"
+  ],
+  "hoặc kèm chảy máu mũi": [
+    "Khí Bất Nhiếp Huyết"
+  ],
+  "tiêu ra máu": [
+    "Khí Bất Nhiếp Huyết"
+  ],
+  "sắc mặt nhợt nhạt": [
+    "Thận dương hư"
+  ],
+  "mắt khô": [
+    "Âm hư",
+    "Thận âm hư - Âm hư can vượng",
+    "Giai đoạn cuối (can thận âm hư)",
+    "Can âm hư (Âm hư)"
+  ],
+  "chân tay lạnh mát": [
+    "Thận dương hư"
+  ],
+  "sắc mặt kém tươi": [
+    "Tâm Huyết Bất Túc",
+    "Khí hư hạ hãm"
+  ],
+  "hai gò má đỏ tía": [
+    "Phong Thấp Xâm Phạm"
+  ],
+  "thậm chí môi và móng tay chân tím tái hoặc ho suyễn khạc ra máu": [
+    "Phong Thấp Xâm Phạm"
+  ],
+  "Mắt cảm thấy có dị vật": [
+    "Phong nhiệt"
+  ],
+  "sáng dậy nhiều nhử mắt": [
+    "Phong nhiệt"
+  ],
+  "mắt sưng đỏ…": [
+    "Phong nhiệt"
+  ],
+  "Hai mắt đỏ": [
+    "Thấp nhiệt"
+  ],
+  "tròng trắng mắt dày lên": [
+    "Âm hư (mạn tính)"
+  ],
+  "nhiều tia máu": [
+    "Âm hư (mạn tính)",
+    "Âm hư"
+  ],
+  "nhìn lâu mỏi mắt": [
+    "Âm hư (mạn tính)"
+  ],
+  "ra nhầy máu": [
+    "Thấp nhiệt lỵ"
+  ],
+  "ít máu": [
+    "Dịch độc lỵ",
+    "Hàn thấp lỵ"
+  ],
+  "có lúc kèm máu mũi": [
+    "Lỵ mạn tính"
+  ],
+  "sắc mặt tím sám": [
+    "Huyết ứ"
+  ],
+  "tinh thần không thoải mái": [
+    "Khí uất"
+  ],
+  "sắc mặt trắng bóng": [
+    "Khí hư"
+  ],
+  "sắc mặt xanh xám": [
+    "Dương khí hư thoát",
+    "Can uất"
+  ],
+  "máu cục": [
+    "Huyết nhiệt"
+  ],
+  "sắc mặt không nhuận": [
+    "Âm hư"
+  ],
+  "sắc mặt trắng bủng": [
+    "Khí hư",
+    "Hư hàn"
+  ],
+  "mùi hôi tanh có dính máu": [
+    "Thấp nhiệt"
+  ],
+  "sắc mặt xạm tối": [
+    "Thận hư"
+  ],
+  "sắc mặt xạm đen": [
+    "Thận hư"
+  ],
+  "môi tím": [
+    "Khí trệ huyết ứ"
+  ],
+  "Sắc mặt không tươi nhuận": [
+    "Tâm tỳ đều hư"
+  ],
+  "Sắc mặt tái nhợt": [
+    "Huyết hư",
+    "Khí âm hư",
+    "Thận dương hư (Dương hư)",
+    "Âm dương lưỡng hư",
+    "Tỳ thận dương hư"
+  ],
+  "người da mát sợ lạnh hoặc các khớp đau nhức": [
+    "Tỳ thận dương hư"
+  ],
+  "mặt trắng nhạt nhưng về chiều bừng nóng": [
+    "Can thận âm hư"
+  ],
+  "da mặt sạm tối": [
+    "Thận hư",
+    "Khí trệ huyết ứ"
+  ],
+  "mặt có vết nhăn": [
+    "Khí trệ huyết ứ"
+  ],
+  "có mụn cơm hoặc các tia máu ứ": [
+    "Khí trệ huyết ứ"
+  ],
+  "lưỡi có vết ứ máu": [
+    "Khí trệ huyết ứ"
+  ],
+  "người mát": [
+    "Ngoại cảm phong hàn"
+  ],
+  "mũi nghẹt hoặc chảy mũi nước trong": [
+    "Ngoại cảm phong hàn"
+  ],
+  "Cholesterol trong máu tăng cao": [
+    "Tỳ Hư Thấp Khốn",
+    "Đờm Trọc Ngăn Trở"
+  ],
+  "Cholesterol máu tăng": [
+    "Can Uất Khí Trệ"
+  ],
+  "Cholesterol trong máu cao": [
+    "Can Thận Hư Tổn"
+  ],
+  "mắt mờ": [
+    "Can huyết hư",
+    "Can Thận Hư Tổn",
+    "Tỳ hư đàm kết",
+    "Đàm thấp nội trở",
+    "Can âm suy - hư phong nội động",
+    "Can âm suy, hư phong nội động"
+  ],
+  "Cholesterol máu cao": [
+    "Huyết Ứ Ngăn Trở"
+  ],
+  "Mắt kém nhận biết màu sắc": [
+    "Hỏa uất kết"
+  ],
+  "sắc mặt rầu rĩ": [
+    "Thận hư"
+  ],
+  "Mắt nhìn không rõ": [
+    "Khí hư hạ hãm"
+  ],
+  "mạch Huyền Tế Sác. Nặng: chóng mặt tăng": [
+    "Can thận âm hư, Can phong thịnh (xơ cứng động mạch não)"
+  ],
+  "lưng gối nhức mỏi hoặc mặt và chân tay phù": [
+    "Thận dương bất túc (xơ cứng động mạch não)"
+  ],
+  "mắt hoa": [
+    "Xơ cứng động mạch vành (tâm tỳ hư)",
+    "Tâm tỳ hư"
+  ],
+  "Nhồi máu cơ tim ở người có biểu hiện Thận dương hư": [
+    "Thận dương hư (tham khảo)"
+  ],
+  "mắt dại": [
+    "Can âm suy - hư phong nội động",
+    "Can âm suy, hư phong nội động"
+  ],
+  "hố mắt dưới quầng đen": [
+    "Can âm suy - hư phong nội động"
+  ],
+  "Da mặt xanh xạm": [
+    "Khí huyết đều hư, kinh mạch ứ trệ",
+    "Khí huyết đều hư - kinh mạch ứ trệ"
+  ],
+  "quầng đen dưới mắt": [
+    "Can âm suy, hư phong nội động"
+  ],
+  "sổ mũi. 1-2 ngày sau da nổi ban đỏ từ đầu mặt xuống thân": [
+    "Tà xâm nhập phế vị"
+  ],
+  "sắc mặt nhạt": [
+    "Thận khí hư (điều trị cụ thể)",
+    "Khí hư (Mãn tính)"
+  ],
+  "sắc mặt vàng nhạt": [
+    "Tỳ khí suy yếu",
+    "Tỳ khí hư (Khí hư)"
+  ],
+  "vùng má dưới tai đau và sưng dần": [
+    "Thể nhẹ"
+  ],
+  "Má sưng to": [
+    "Thể nặng"
+  ],
+  "Mắt có màng nổi như đá (mã não ế)": [
+    "Can huyết hư (Bổ Can Hoàn II)"
+  ],
+  "da mặt xanh trắng": [
+    "Khí huyết hư suy"
+  ],
+  "Da mặt xuất hiện từng nốt hoặc từng mảng màu nâu sẫm": [
+    "Âm hư"
+  ],
+  "Mặt nổi ban vàng sẫm": [
+    "Huyết hư ứ nhiệt"
+  ],
+  "môi trắng xanh": [
+    "Khí huyết hư"
+  ],
+  "da mặt trắng bệch": [
+    "Can thận bất túc"
+  ],
+  "có khi đái ra máu": [
+    "Thấp nhiệt"
+  ],
+  "tiểu tiện ra máu": [
+    "Ứ huyết"
+  ],
+  "không máu": [
+    "Không có cơn đau"
+  ],
+  "Sốt rét kèm thiếu máu": [
+    "Thiếu máu (biến chứng)"
+  ],
+  "sắc mặt tái nhợt kém tươi nhuận": [
+    "Tâm huyết hư (Huyết hư)"
+  ],
+  "môi lưỡi nhợt": [
+    "Khí Huyết Lưỡng Hư",
+    "Can huyết hư (Huyết hư)",
+    "Tâm huyết hư (Huyết hư)"
+  ],
+  "sắc mặt tái sạm": [
+    "Can huyết hư (Huyết hư)"
+  ],
+  "sắc mặt vàng sạm hoặc tái nhợt": [
+    "Tỳ dương hư (Dương hư)"
+  ],
+  "ho có máu": [
+    "Phế âm hư (Âm hư)"
+  ],
+  "gò má hồng": [
+    "Phế âm hư (Âm hư)"
+  ],
+  "môi khô": [
+    "Huyết nhiệt",
+    "Tỳ vị âm hư (Âm hư)"
+  ],
+  "thích uống nước mát": [
+    "Tỳ vị âm hư (Âm hư)"
+  ],
+  "má đỏ": [
+    "Thận âm hư (Âm hư)"
+  ],
+  "mắt thâm quầng": [
+    "Tâm tỳ hư"
+  ],
+  "môi lưỡi xanh tím": [
+    "Tâm thận dương hư"
+  ],
+  "2 má đỏ": [
+    "Khí hư huyết ứ"
+  ],
+  "môi lưỡi tím đen": [
+    "Khí hư huyết ứ"
+  ],
+  "Sắc mặt xám đen": [
+    "Dương hư ứ huyết"
+  ],
+  "Sắc mặt và da đều đen": [
+    "Tỳ Hư Ứ Huyết"
+  ],
+  "Váng đầu hoa mắt": [
+    "Khí Huyết Lưỡng Hư"
+  ],
+  "đầu quay quắt không muốn mở mắt": [
+    "Can thận âm hư"
+  ],
+  "Táo bón kéo dài ở người thiếu máu": [
+    "Thiếu máu"
+  ],
+  "Nước mắt tự nhiên chảy ra (chảy nước mắt sống)": [
+    "Phong kết hợp Can thận âm hư"
+  ],
+  "đỏ ở góc mắt trong": [
+    "Phong kết hợp Can thận âm hư"
+  ],
+  "nhiễm trùng mắt tái đi tái lại": [
+    "Phong kết hợp Can thận âm hư"
+  ],
+  "xuất tiết nhầy mắt": [
+    "Phong kết hợp Can thận âm hư"
+  ],
+  "Đau rát nóng không chịu được ở một bên đầu hoặc mặt": [
+    "Phong nhiệt đờm"
+  ],
+  "da mặt đỏ": [
+    "Phong nhiệt đờm"
+  ],
+  "thích chườm mát": [
+    "Phong nhiệt đờm"
+  ],
+  "mạch Huyền Sác (nếu đờm nhiệt ngăn trở kinh mạch: chóng mặt": [
+    "Phong nhiệt đờm"
+  ],
+  "khi đau da mặt xám như da chì": [
+    "Phong hàn đờm"
+  ],
+  "mạch Khẩn (nếu hàn đờm ngăn trở kinh lạc: mặt tê dại": [
+    "Phong hàn đờm"
+  ],
+  "một bên đầu hoặc mặt đau rát": [
+    "Can uất hoá hoả"
+  ],
+  "Một bên đầu hoặc mặt đau dữ dội": [
+    "Đờm thấp"
+  ],
+  "Mặt đau liên tục thời gian dài": [
+    "Khí hư huyết ứ"
+  ],
+  "mặt xám": [
+    "Khí hư huyết ứ"
+  ],
+  "da mặt trắng nhạt": [
+    "Khí hư huyết ứ"
+  ],
+  "đau rát một chỗ ở một bên mặt": [
+    "Âm hư huyết ứ"
+  ],
+  "sắc mặt tím": [
+    "Huyết ứ"
+  ],
+  "kinh ít máu đỏ sẫm có cục": [
+    "Cảm hàn"
+  ],
+  "sắc mặt xanh trắng hoặc úa vàng": [
+    "Khí huyết hư"
+  ],
+  "choáng hoa mắt": [
+    "Khí huyết hư"
+  ],
+  "Tiêu ra máu lâu ngày": [
+    "Khí huyết hư"
+  ],
+  "chóng mặt đau đầu": [
+    "Can dương thịnh",
+    "Âm hư hỏa vượng – tâm thận bất giao"
+  ],
+  "mắt lệch": [
+    "Đờm nhiệt"
+  ],
+  "sắc mặt u tối": [
+    "Khí hư huyết ứ"
+  ],
+  "có khi nôn ra máu": [
+    "Đờm nhiệt nội bế thanh khiếu"
+  ],
+  "mặt trắng": [
+    "Đờm thấp che lấp tâm khiếu"
+  ],
+  "môi xám": [
+    "Đờm thấp che lấp tâm khiếu"
+  ],
+  "Tiểu ra máu từng lúc": [
+    "Thấp nhiệt hóa hỏa"
+  ],
+  "màu đỏ tươi hoặc có máu cục": [
+    "Thấp nhiệt hóa hỏa"
+  ],
+  "Tiểu ra máu hoặc trong nước tiểu có máu": [
+    "Thấp nhiệt ở hạ tiêu"
+  ],
+  "mất máu": [
+    "Âm hư thấp nhiệt"
+  ],
+  "môi lưỡi nhợt nhạt": [
+    "Khí huyết đều hư"
+  ],
+  "sắc mặt vàng bủng": [
+    "Thể mãn tính - Tỳ hư",
+    "Can khí uất kết, tỳ thất kiện vận"
+  ],
+  "sắc mặt sạm đen": [
+    "Huyết ứ nội trở, can lạc bất thông (xơ gan)"
+  ],
+  "ỉa ra máu": [
+    "Huyết ứ nội trở, can lạc bất thông (xơ gan)"
+  ],
+  "vàng mắt": [
+    "Ứ độc nội trở, ngoan tụ bất tán (thể viêm)"
+  ],
+  "Sắc mặt xám đen hoặc xám bệch": [
+    "Khí âm song hao, chính bất thắng tà (giai đoạn cuối)"
+  ],
+  "mờ mắt": [
+    "Âm hư nhiệt kết"
+  ],
+  "sắc mặt vàng héo": [
+    "Âm hư nhiệt kết"
+  ],
+  "sắc mặt xám xịt": [
+    "Âm hư nhiệt kết (u lành tuyến yên)"
+  ],
+  "Đờm ít hoặc đờm trắng dính hoặc có máu": [
+    "Âm hư đờm nhiệt"
+  ],
+  "đàm có dính máu": [
+    "Khí huyết ứ trệ"
+  ],
+  "môi lưỡi tím có nốt ứ huyết": [
+    "Khí huyết ứ trệ"
+  ],
+  "đờm dính hoặc có máu": [
+    "Kinh nghiệm (khí âm lưỡng hư)"
+  ],
+  "mặt mày xanh xám": [
+    "Âm hư hỏa vượng – tâm thận bất giao"
+  ],
+  "môi miệng tím đen": [
+    "Âm hư hỏa vượng – tâm thận bất giao"
+  ],
+  "hai mắt quầng đen": [
+    "Âm hư hỏa vượng – tâm thận bất giao"
+  ],
+  "mặt sưng": [
+    "Âm dương lưỡng hư"
+  ],
+  "mọc ở tay chân hoặc đầu mặt": [
+    "Phong nhiệt"
+  ],
+  "mặt da khô": [
+    "Phong huyết táo"
+  ],
+  "trên mặt mụn có thể thối nát": [
+    "Phong hàn"
+  ],
+  "hố mắt": [
+    "Thấp nhiệt"
+  ],
+  "có thể mọc ở đầu và mặt trước": [
+    "Huyết nhiệt"
+  ],
+  "bề mặt có màu trắng đục": [
+    "Huyết nhiệt"
+  ],
+  "vỡ nát có khi rướm máu": [
+    "Huyết nhiệt"
+  ],
+  "bề mặt hơi lõm": [
+    "Huyết ứ"
+  ],
+  "kèm chóng mặt": [
+    "Huyết hư"
+  ],
+  "lưỡi bình thường hoặc hơi có vết ứ máu": [
+    "Huyết ứ"
+  ],
+  "có thể tiểu ra máu": [
+    "Thấp nhiệt (Thực chứng/Nhiệt chứng)"
+  ],
+  "Phù mặt và nửa người trên": [
+    "Phong thủy"
+  ],
+  "phù ở mí mắt": [
+    "Tỳ dương hư",
+    "Thể tỳ dương hư"
+  ],
+  "sắc mặt trắng xanh": [
+    "Tỳ dương hư",
+    "Thận tỳ dương hư",
+    "Thể thận tỳ dương hư",
+    "Thể tỳ dương hư"
+  ],
+  "kéo dài (nhất là 2 mắt cá chân)": [
+    "Thể thận tỳ dương hư"
+  ],
+  "Ure máu cao": [
+    "Thể nặng (Ure máu cao)",
+    "Viêm cầu thận mạn nặng (ure máu cao)"
+  ],
+  "sắc mặt đen": [
+    "Thể nặng (Ure máu cao)",
+    "Viêm cầu thận mạn nặng (ure máu cao)"
+  ],
+  "nhất là 2 mắt cá chân": [
+    "Thận tỳ dương hư"
+  ],
+  "Da mắt vàng tươi": [
+    "Thấp nhiệt"
+  ],
+  "tiêu tiểu có máu": [
+    "Nhiệt độc (Thể nặng và rất nặng)"
+  ],
+  "Sắc mặt kém tươi nhuận": [
+    "Khí huyết ứ trệ"
+  ],
+  "môi thâm tím": [
+    "Khí huyết ứ trệ"
+  ],
+  "sáng dậy nhiều dử mắt": [
+    "Phong nhiệt"
+  ],
+  "mắt sưng đỏ": [
+    "Phong nhiệt"
+  ],
+  "đau nặng vùng đầu mặt": [
+    "Phong nhiệt (phát ở đầu mặt)"
+  ],
+  "mí mắt sưng khó mở": [
+    "Phong nhiệt (phát ở đầu mặt)"
+  ],
+  "chảy mủ tai vàng đặc có dính máu": [
+    "Thể cấp tính (phong nhiệt, nhiệt độc xâm phạm can đởm)"
+  ],
+  "chóng mặt hồi hộp": [
+    "Đàm thấp"
+  ],
+  "mặt xanh tái nhợt": [
+    "Nhồi máu cơ tim (Tâm dương hư thoát)"
+  ],
+  "mặt xạm": [
+    "Giai đoạn cuối (tỳ thận dương hư)"
+  ]
 }
