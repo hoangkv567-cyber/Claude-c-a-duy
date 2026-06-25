@@ -117,6 +117,20 @@ class TCMFusionPipeline:
                 else:
                     text = max(parts, key=len)
                     
+        # 1.3. Loại bỏ ghi chú tự giải thích/tự sửa lỗi của LLM (ví dụ: (Note: ...), Note: ...)
+        note_pattern = r'\((?:note|lưu ý|chú thích|chú ý|corrected version|bản dịch)[^)]*\)|\[(?:note|lưu ý|chú thích|chú ý|corrected version|bản dịch)[^\]]*\]|\b(?:note|lưu ý|chú thích|chú ý|corrected version|bản dịch):\s*'
+        if re.search(note_pattern, text, flags=re.IGNORECASE):
+            parts = re.split(note_pattern, text, flags=re.IGNORECASE)
+            parts = [p.strip() for p in parts if p.strip()]
+            if parts:
+                last_part = parts[-1]
+                tcm_keywords = ["lưỡi", "mặt", "sắc", "rêu", "màu", "hồng", "đỏ", "nhợt", "dấu", "răng", "nứt"]
+                is_tcm_translation = any(kw in last_part.lower() for kw in tcm_keywords)
+                if len(last_part) > 15 and is_tcm_translation:
+                    text = last_part
+                else:
+                    text = parts[0]
+                    
         # 1.5. Dịch các từ tiếng Anh chuyên ngành thường gặp mà Qwen đôi khi bỏ sót
         replacements = {
             r'\bExpression\b': 'Biểu cảm',
@@ -151,15 +165,16 @@ class TCMFusionPipeline:
         if not english_text:
             return ""
         
-        # Heuristic: Thay thế các từ nhạy cảm để tránh bug tokenization/loop của Qwen
+        # Heuristic: Thay thế các từ nhạy cảm để tránh bug tokenization/loop/tự giải thích của Qwen
         text_clean = english_text.replace("indicate", "suggest").replace("Indicate", "Suggest")
         text_clean = text_clean.replace("indicates", "suggests").replace("Indicates", "Suggests")
         text_clean = text_clean.replace("abnormalities", "abnormal features").replace("Abnormalities", "Abnormal features")
         text_clean = text_clean.replace("abnormality", "abnormal feature").replace("Abnormality", "Abnormal feature")
+        text_clean = text_clean.replace("visible", "apparent").replace("Visible", "Apparent")
         
         prompt = f"""
         Translate the following English medical description of patient's features into natural Vietnamese.
-        Output ONLY the translated Vietnamese text. Do not add any explanation or metadata.
+        TUYỆT ĐỐI KHÔNG giải thích, KHÔNG viết chú thích hay tự sửa chữa bằng cả tiếng Anh hay tiếng Việt (ví dụ: KHÔNG ghi 'Note:', 'Lưu ý:', 'Corrected version:'). Chỉ trả về duy nhất văn bản dịch tiếng Việt sạch.
 
         Text to translate: "{text_clean}"
         Vietnamese translation:
@@ -168,7 +183,7 @@ class TCMFusionPipeline:
             res = self.qa_pipeline.client.chat(
                 model=self.qa_pipeline.llm_model,
                 messages=[
-                    {"role": "system", "content": "Bạn là dịch giả y khoa Đông y chuyên nghiệp. Bạn chỉ dịch văn bản tiếng Anh sang tiếng Việt. Bạn chỉ được viết bằng chữ cái tiếng Việt, tuyệt đối không dùng chữ Hán, chữ Trung Quốc hay ký tự ngoại quốc nào khác."},
+                    {"role": "system", "content": "Bạn là một công cụ dịch thuật y khoa Đông y tự động. Nhiệm vụ duy nhất của bạn là dịch văn bản tiếng Anh sang tiếng Việt. Tuyệt đối KHÔNG viết thêm bất kỳ ghi chú, giải thích, hay tự sửa lỗi nào (như 'Note:', 'Lưu ý:', 'Corrected version'). Chỉ xuất ra duy nhất bản dịch tiếng Việt sạch."},
                     {"role": "user", "content": prompt}
                 ],
                 options={"temperature": 0.0, "seed": 42, "max_tokens": 150}
