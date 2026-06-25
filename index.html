@@ -260,8 +260,8 @@
             const faceFile = document.getElementById('faceImg').files[0];
             const tongueFile = document.getElementById('tongueImg').files[0];
 
-            if (!symptoms.trim() || (!faceFile && !tongueFile)) {
-                alert("Bắt buộc phải cung cấp cả triệu chứng bằng văn bản và ít nhất một hình ảnh (ảnh khuôn mặt hoặc ảnh lưỡi) để tiến hành chẩn đoán!");
+            if (!symptoms.trim() && !faceFile && !tongueFile) {
+                alert("Vui lòng cung cấp triệu chứng bằng văn bản hoặc tải lên ít nhất một hình ảnh (ảnh khuôn mặt hoặc ảnh lưỡi) để tiến hành chẩn đoán!");
                 return;
             }
 

@@ -12,9 +12,19 @@ qa:
   top_p: 0.9
 
 huggingface:
-  use_cloud: true
-  token: "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"
+  use_cloud: false
+  token: "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"
   model: "Qwen/Qwen2.5-7B-Instruct"
+
+openrouter:
+  use_cloud: false
+  api_key: "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"
+  model: "openrouter/free"
+
+siliconflow:
+  use_cloud: true
+  api_key: "sk-pqnfioyehtkdbqoushokjhtcvazgbhngiwdssxtycsduqiio"
+  model: "Qwen/Qwen2.5-72B-Instruct"
 
 logging:
   level: "INFO"

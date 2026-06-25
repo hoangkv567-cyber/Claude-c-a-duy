@@ -235,7 +235,7 @@ class TCMFusionPipeline:
             return []
 
     def _extract_syndromes_from_text(self, text: str) -> list:
-        """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, nếu không có mới dùng LLM lọc từ khóa"""
+        """Trích xuất hội chứng bằng cách khớp triệu chứng chính xác trước, kết hợp LLM dịch thuật/quy đổi từ khóa đối với câu phức tạp"""
         if not text:
             return []
         
@@ -245,127 +245,155 @@ class TCMFusionPipeline:
             english_indicators = ["patient", "pale", "complexion", "expression", "spirit", "eyes", "swelling", "spots", "rash", "skin", "face", "fatigue", "spiritless", "puffiness", "dark circles", "mole"]
             has_english = any(w in text.lower() for w in english_indicators)
 
-            # 1. Nếu không có tiếng Anh, thử khớp triệu chứng & bệnh lý chính xác từ database trước
-            if not has_english:
-                # Thử khớp triệu chứng chính xác từ database trước (Longest Match First)
-                exact_symptoms = self.qa_pipeline._preprocess_question(text)
-                if exact_symptoms:
-                    logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
-                    symptoms_lower = [s.lower() for s in exact_symptoms]
-                    cypher = f"""
-                    MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
-                    WHERE toLower(t.name) IN {symptoms_lower}
-                    RETURN DISTINCT h.name
-                    """
-                    records = self.qa_pipeline.run_cypher(cypher)
-                    for rec in records:
-                        if rec.get('h.name'):
-                            syndromes.append(rec['h.name'])
-
-                # Thử khớp tên bệnh lý (BenhLy) từ database
-                matched_diseases = []
-                try:
-                    with self.qa_pipeline.driver.session() as session:
-                        result = session.run("MATCH (b:BenhLy) RETURN b.name AS name")
-                        db_diseases = [record["name"] for record in result]
-                    
-                    db_diseases_sorted = sorted(db_diseases, key=len, reverse=True)
-                    text_lower = text.lower()
-                    for disease in db_diseases_sorted:
-                        if len(disease.split()) < 2 and disease.lower() not in ["ho", "lao"]:
-                            continue
-                        import re
-                        pattern = rf'\b{re.escape(disease.lower())}\b'
-                        if re.search(pattern, text_lower):
-                            matched_diseases.append(disease)
-                except Exception as ex:
-                    logger.error(f"Lỗi khớp tên bệnh lý: {ex}")
-
-                # Lọc bỏ các bệnh lý trùng lặp hoặc là con (sub-phrase) của các triệu chứng đã khớp để ưu tiên triệu chứng đặc hiệu
-                if exact_symptoms and matched_diseases:
-                    filtered_diseases = []
-                    symptoms_lower = [s.lower() for s in exact_symptoms]
-                    for disease in matched_diseases:
-                        disease_lower = disease.lower()
-                        if any(disease_lower in sym for sym in symptoms_lower):
-                            continue
-                        filtered_diseases.append(disease)
-                    matched_diseases = filtered_diseases
-
-                if matched_diseases:
-                    logger.info(f"Đã khớp bệnh lý chính xác từ database: {matched_diseases}")
-                    diseases_lower = [d.lower() for d in matched_diseases]
-                    cypher = f"""
-                    MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)
-                    WHERE toLower(b.name) IN {diseases_lower}
-                    RETURN DISTINCT h.name
-                    """
-                    records = self.qa_pipeline.run_cypher(cypher)
-                    for rec in records:
-                        if rec.get('h.name'):
-                            syndromes.append(rec['h.name'])
-                    
-                if syndromes:
-                    return list(set(syndromes))
-
-            # 2. Fallback hoặc có chứa tiếng Anh: dùng LLM dịch thuật và đóng vai trò màng lọc nhiễu
-            if has_english:
-                logger.info("Phát hiện mô tả sắc mặt tiếng Anh. Sử dụng LLM dịch thuật và lọc từ khóa...")
-            else:
-                logger.info("Không khớp được triệu chứng chính xác, chuyển sang dùng LLM lọc từ khóa...")
-                
-            text_norm = normalize_symptoms_text(text)
-            
-            if has_english:
-                prompt = f"""
-                Câu của bệnh nhân (chứa triệu chứng tiếng Việt và mô tả sắc mặt bằng tiếng Anh): "{text_norm}"
-                Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA bằng TIẾNG VIỆT thực sự.
-                LƯU Ý QUAN TRỌNG: Nếu trong câu có mô tả bằng tiếng Anh (ví dụ: 'pale complexion', 'dark circles under eyes', 'fatigue expression', 'spots on face', 'puffiness'), hãy DỊCH và quy đổi chúng sang triệu chứng Đông y tiếng Việt tương ứng (ví dụ: 'sắc mặt nhợt nhạt', 'quầng thâm mắt', 'thần sắc kém', 'mặt có ban', 'mặt phù').
-                MỖI TRIỆU CHỨNG TIẾNG VIỆT PHẢI CÓ TỪ 2 TỪ TRỞ LÊN (ví dụ: ho khan, ho đờm, đau đầu, sắc mặt nhợt, thần sắc kém).
-                TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
-                Chỉ trả về danh sách các từ khóa tiếng Việt cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
-                """
-            else:
-                prompt = f"""
-                Câu của bệnh nhân: "{text_norm}"
-                Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA thực sự.
-                MỖI TRIỆU CHỨNG PHẢI CÓ TỪ 2 TỪ TRỞ LÊN (ví dụ: ho khan, ho đờm, đau đầu, sốt cao, nôn mửa, chóng mặt).
-                TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
-                YÊU CẦU: BẮT BUỘC chỉ trích xuất các từ khóa bằng tiếng Việt chính xác như trong câu của bệnh nhân.
-                Chỉ trả về danh sách các từ khóa cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
-                """
-                
-            res = self.qa_pipeline.client.chat(
-                model=self.qa_pipeline.llm_model,
-                messages=[
-                    {"role": "system", "content": "Bạn là trợ lý y khoa chỉ trích xuất từ khóa bằng tiếng Việt từ câu hỏi của bệnh nhân."},
-                    {"role": "user", "content": prompt}
-                ],
-                options={"temperature": 0.0, "seed": 42}
-            )
-            keywords_str = res['message']['content'].strip()
-            
-            # Xóa bỏ các ký tự thừa nếu LLM lỡ sinh ra
-            keywords_str = keywords_str.replace('"', '').replace("'", "").replace(".", "")
-            
-            # Tách thành mảng các từ khóa sạch (bắt buộc triệu chứng phải từ 2 từ trở lên, ví dụ: ho khan, ho đờm, đau đầu)
-            keywords = [k.strip().lower() for k in keywords_str.split(',') if len(k.strip().split()) >= 2]
-            logger.info(f"Từ khóa y khoa đã lọc sạch nhiễu và quy đổi: {keywords}")
-            
-            # Quét trực tiếp Database với các từ khóa
-            for kw in keywords:
+            # 1. Thử khớp triệu chứng chính xác từ database trước (Longest Match First)
+            exact_symptoms = self.qa_pipeline._preprocess_question(text)
+            if exact_symptoms:
+                logger.info(f"Đã khớp triệu chứng chính xác từ database: {exact_symptoms}")
+                symptoms_lower = [s.lower() for s in exact_symptoms]
                 cypher = f"""
-                MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung) 
-                WHERE toLower(t.name) CONTAINS '{kw}' 
+                MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
+                WHERE toLower(t.name) IN {symptoms_lower}
                 RETURN DISTINCT h.name
                 """
                 records = self.qa_pipeline.run_cypher(cypher)
                 for rec in records:
                     if rec.get('h.name'):
                         syndromes.append(rec['h.name'])
+
+            # Thử khớp tên bệnh lý (BenhLy) từ database
+            matched_diseases = []
+            try:
+                with self.qa_pipeline.driver.session() as session:
+                    result = session.run("MATCH (b:BenhLy) RETURN b.name AS name")
+                    db_diseases = [record["name"] for record in result]
+                
+                db_diseases_sorted = sorted(db_diseases, key=len, reverse=True)
+                text_lower = text.lower()
+                for disease in db_diseases_sorted:
+                    if len(disease.split()) < 2 and disease.lower() not in ["ho", "lao"]:
+                        continue
+                    import re
+                    pattern = rf'\b{re.escape(disease.lower())}\b'
+                    if re.search(pattern, text_lower):
+                        matched_diseases.append(disease)
+            except Exception as ex:
+                logger.error(f"Lỗi khớp tên bệnh lý: {ex}")
+
+            # Lọc bỏ các bệnh lý trùng lặp hoặc là con (sub-phrase) của các triệu chứng đã khớp để ưu tiên triệu chứng đặc hiệu
+            if exact_symptoms and matched_diseases:
+                filtered_diseases = []
+                symptoms_lower = [s.lower() for s in exact_symptoms]
+                for disease in matched_diseases:
+                    disease_lower = disease.lower()
+                    if any(disease_lower in sym for sym in symptoms_lower):
+                        continue
+                    filtered_diseases.append(disease)
+                matched_diseases = filtered_diseases
+
+            if matched_diseases:
+                logger.info(f"Đã khớp bệnh lý chính xác từ database: {matched_diseases}")
+                diseases_lower = [d.lower() for d in matched_diseases]
+                cypher = f"""
+                MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)
+                WHERE toLower(b.name) IN {diseases_lower}
+                RETURN DISTINCT h.name
+                """
+                records = self.qa_pipeline.run_cypher(cypher)
+                for rec in records:
+                    if rec.get('h.name'):
+                        syndromes.append(rec['h.name'])
+                        
+            # Nếu đã khớp được hội chứng từ database và KHÔNG có tiếng Anh, trả về ngay để tiết kiệm tài nguyên
+            if syndromes and not has_english:
+                return list(set(syndromes))
+
+            # 2. Fallback hoặc có chứa tiếng Anh: dùng LLM dịch thuật và đóng vai trò màng lọc nhiễu
+            word_count = len(text.split())
+            should_run_llm = not syndromes or word_count > 10 or has_english
+            
+            if should_run_llm:
+                if has_english:
+                    logger.info("Phát hiện mô tả tiếng Anh hoặc cần kích hoạt LLM dịch thuật & trích xuất...")
+                else:
+                    logger.info("Kích hoạt LLM trích xuất và quy đổi triệu chứng từ câu dài/phức tạp...")
+                    
+                text_norm = normalize_symptoms_text(text)
+                
+                if has_english:
+                    prompt = f"""
+                    Câu của bệnh nhân (chứa triệu chứng tiếng Việt và mô tả sắc mặt bằng tiếng Anh): "{text_norm}"
+                    Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA bằng TIẾNG VIỆT thực sự.
+                    LƯU Ý QUAN TRỌNG: Nếu trong câu có mô tả bằng tiếng Anh (ví dụ: 'pale complexion', 'dark circles under eyes', 'spots on face', 'puffiness'), hãy DỊCH và quy đổi chúng sang triệu chứng Đông y tiếng Việt tương ứng (ví dụ: 'sắc mặt nhợt nhạt', 'quầng thâm mắt', 'mặt có ban', 'mặt phù').
+                    MỖI TRIỆU CHỨNG TIẾNG VIỆT PHẢI CÓ TỪ 2 TỪ TRỞ LÊN (ví dụ: ho khan, ho đờm, đau đầu, sắc mặt nhợt).
+                    TUYỆT ĐỐI KHÔNG trích xuất các triệu chứng chủ quan về tinh thần, cảm xúc, thần sắc hoặc biểu cảm khuôn mặt từ ảnh chụp (ví dụ: loại bỏ hoàn toàn các từ như 'mệt mỏi', 'thần sắc mệt mỏi', 'biểu cảm mệt mỏi', 'biểu cảm trung tính', 'dấu hiệu mệt mỏi', 'căng thẳng', 'làm việc quá sức'). Chỉ tập trung vào các đặc điểm thực thể vật lý thực sự (ví dụ: sắc mặt nhợt nhạt, quầng thâm mắt, mặt phù, lưỡi nhợt, rêu trắng...).
+                    TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
+                    Chỉ trả về danh sách các từ khóa tiếng Việt cốt lõi, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
+                    """
+                else:
+                    prompt = f"""
+                    Câu của bệnh nhân: "{text_norm}"
+                    Nhiệm vụ: Chỉ trích xuất các danh từ/động từ chỉ TRIỆU CHỨNG Y KHOA Đông y thực sự.
+                    MỖI TRIỆU CHỨNG PHẢI CÓ TỪ 2 TỪ TRỞ LÊN (ví dụ: ho khan, ho đờm, đau đầu, sốt cao, nôn mửa, chóng mặt).
+                    TUYỆT ĐỐI KHÔNG trích xuất các từ đơn lẻ chỉ có 1 từ (ví dụ: ho, sốt, đau, mỏi) và loại bỏ các trạng từ chỉ mức độ, thời gian hoặc từ xưng hô (ví dụ: tôi, bị, liên tục, nhiều, quá, rũ rượi, dồn dập).
+                    
+                    LƯU Ý QUAN TRỌNG: Nếu trong câu có mô tả cảm quan hoặc hình ảnh lâm sàng (ví dụ: 'tông màu da nhợt nhạt', 'mặt trông nhợt nhạt', 'da nhợt', 'vàng xanh quanh mắt'), hãy quy đổi/dịch chúng sang thuật ngữ triệu chứng y khoa chuẩn xác tương ứng (ví dụ: 'sắc mặt nhợt nhạt', 'mặt nhợt', 'sắc mặt vàng').
+                    TUYỆT ĐỐI KHÔNG trích xuất các triệu chứng chủ quan về tinh thần, cảm xúc, thần sắc hoặc biểu cảm khuôn mặt thu được từ ảnh chụp (ví dụ: loại bỏ hoàn toàn các từ như 'mệt mỏi', 'thần sắc mệt mỏi', 'biểu cảm mệt mỏi', 'biểu cảm trung tính', 'dấu hiệu mệt mỏi', 'căng thẳng', 'làm việc quá sức'). Chỉ tập trung vào các đặc điểm thực thể vật lý thực sự (ví dụ: sắc mặt nhợt nhạt, sắc mặt vàng, quầng thâm mắt, lưỡi nhợt, rêu trắng...).
+                    
+                    Chỉ trả về danh sách các từ khóa triệu chứng chuẩn xác, cách nhau bằng dấu phẩy. Không giải thích gì thêm.
+                    """
+                    
+                res = self.qa_pipeline.client.chat(
+                    model=self.qa_pipeline.llm_model,
+                    messages=[
+                        {"role": "system", "content": "Bạn là trợ lý y khoa chỉ trích xuất từ khóa bằng tiếng Việt từ câu hỏi của bệnh nhân."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    options={"temperature": 0.0, "seed": 42}
+                )
+                keywords_str = res['message']['content'].strip()
+                
+                # Xóa bỏ các ký tự thừa nếu LLM lỡ sinh ra
+                keywords_str = keywords_str.replace('"', '').replace("'", "").replace(".", "")
+                
+                # Tách thành mảng các từ khóa sạch (bắt buộc triệu chứng phải từ 2 từ trở lên, ví dụ: ho khan, ho đờm, đau đầu)
+                keywords = [k.strip().lower() for k in keywords_str.split(',') if len(k.strip().split()) >= 2]
+                
+                # Loại bỏ các từ khóa từ LLM nếu chúng trùng hoặc là tập con/tập cha của triệu chứng khớp chính xác từ database
+                if exact_symptoms:
+                    symptoms_lower = [sym.lower() for sym in exact_symptoms]
+                    filtered_keywords = []
+                    for kw in keywords:
+                        overlap = False
+                        for sym_l in symptoms_lower:
+                            if kw in sym_l or sym_l in kw:
+                                overlap = True
+                                break
+                        if not overlap:
+                            filtered_keywords.append(kw)
+                    keywords = filtered_keywords
+                    
+                    # Giữ nguyên các triệu chứng khớp chính xác từ database làm từ khóa chính
+                    for sym_l in symptoms_lower:
+                        if sym_l not in keywords:
+                            keywords.append(sym_l)
+                            
+                logger.info(f"Từ khóa y khoa đã lọc sạch nhiễu và quy đổi: {keywords}")
+                
+                # Quét trực tiếp Database với các từ khóa
+                for kw in keywords:
+                    cypher = f"""
+                    MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung) 
+                    WHERE toLower(t.name) CONTAINS '{kw}' 
+                    RETURN DISTINCT h.name
+                    """
+                    records = self.qa_pipeline.run_cypher(cypher)
+                    for rec in records:
+                        if rec.get('h.name'):
+                            syndromes.append(rec['h.name'])
+                            
             return list(set(syndromes))
         except Exception as e:
-            logger.error(f"Lỗi khi trích xuất hội chứng: {e}") 
+            logger.error(f"Lỗi khi trích xuất hội chứng: {e}")
             return []
 
     def _get_face_tongue_symptoms_for_syndrome(self, syndrome: str) -> dict:
@@ -457,7 +485,41 @@ class TCMFusionPipeline:
         """
         final_markdown = "### 1. Kết luận chẩn đoán\n"
         all_syndromes = [item["syndrome"] for item in detailed_kg_data]
-        final_markdown += f"Dựa trên phương pháp Tứ chẩn hợp tham, hệ thống chẩn đoán bệnh nhân có biểu hiện của hội chứng: **{', '.join(all_syndromes)}**.\n\n"
+        final_markdown += f"- **Các hội chứng liên quan:** {', '.join(all_syndromes)}\n"
+        
+        # Xác định hội chứng khả quan nhất và liên quan nhất
+        if len(all_syndromes) > 1:
+            symptoms_str = user_symptoms
+            if detected_symptoms:
+                symptoms_str = f"{symptoms_str}, {', '.join(detected_symptoms)}"
+            
+            prompt_primary = f"""
+            Vai trò: Bác sĩ Đông y giàu kinh nghiệm.
+            Bệnh nhân có các triệu chứng: {symptoms_str}.
+            Danh sách các hội chứng được tìm thấy: {', '.join(all_syndromes)}.
+            Nhiệm vụ: Hãy chọn ra đúng 1 HỘI CHỨNG KHẢ QUAN VÀ LIÊN QUAN NHẤT (hội chứng cốt lõi/phù hợp nhất với các triệu chứng của bệnh nhân) từ danh sách trên, và viết đúng 1-2 câu giải thích ngắn gọn lý do tại sao hội chứng đó là phù hợp nhất.
+            Yêu cầu: Viết hoàn toàn bằng tiếng Việt tự nhiên sạch sẽ. Không dùng chữ Hán hay tiếng Trung. Chỉ trả về kết quả định dạng:
+            - **Hội chứng khả quan nhất:** [Tên hội chứng]
+            - **Lý do phù hợp:** [Giải thích ngắn gọn 1-2 câu]
+            Tuyệt đối không thêm bất kỳ lời chào, markdown phụ hay giải thích nào khác ngoài định dạng trên.
+            """
+            try:
+                response = self.qa_pipeline.client.chat(
+                    model=self.qa_pipeline.llm_model,
+                    messages=[
+                        {"role": "system", "content": "Bạn là bác sĩ Đông y Việt Nam. Bạn chỉ phản hồi kết luận hội chứng phù hợp nhất theo đúng định dạng được yêu cầu."},
+                        {"role": "user", "content": prompt_primary}
+                    ],
+                    options={"temperature": 0.1, "seed": 42}
+                )
+                primary_text = response['message']['content'].strip()
+                primary_text = self._clean_foreign_characters(primary_text)
+                final_markdown += f"{primary_text}\n\n"
+            except Exception as e:
+                logger.error(f"Lỗi chọn hội chứng chính: {e}")
+                final_markdown += f"- **Hội chứng khả quan nhất:** {all_syndromes[0]}\n- **Lý do phù hợp:** Đây là hội chứng có độ tương thích cao với tổ hợp triệu chứng của bệnh nhân.\n\n"
+        else:
+            final_markdown += f"- **Hội chứng khả quan nhất:** {all_syndromes[0]}\n- **Lý do phù hợp:** Đây là hội chứng duy nhất phù hợp hoàn toàn với các biểu hiện lâm sàng của bệnh nhân.\n\n"
         
         final_markdown += "### 2. Biện chứng luận trị và Đồ thị tri thức\n"
         
@@ -501,7 +563,7 @@ class TCMFusionPipeline:
             
             if bai_thuoc != "Chưa có dữ liệu":
                 final_markdown += f"- **Phương dược điều trị:** Bài thuốc **{bai_thuoc}** `(HoiChung)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(BaiThuoc)`\n"
-                final_markdown += f"- **Thành phần vị thuốc:** Bao gồm **{vi_thuoc}** `(BaiThuoc)-[:BAO_GÔM]->(ViThuoc)`\n\n"
+                final_markdown += f"- **Thành phần vị thuốc:** Bao gồm **{vi_thuoc}** `(BaiThuoc)-[:BAO_GỒM]->(ViThuoc)`\n\n"
             else:
                 final_markdown += f"- **Phương dược điều trị:** Hiện chưa có bài thuốc cập nhật cho hội chứng này trong hệ thống.\n\n"
         # Thu thập danh sách tất cả các bệnh để sinh lời khuyên phù hợp
@@ -696,6 +758,10 @@ class TCMFusionPipeline:
             final_syndromes = []
         else:
             final_syndromes = filtered_final_syndromes
+            
+        # Loại bỏ các hội chứng trùng lặp giữ nguyên thứ tự
+        seen = set()
+        final_syndromes = [x for x in final_syndromes if not (x in seen or seen.add(x))]
         # === KẾT THÚC CHẶN KẾT QUẢ KHÔNG HỢP LỆ ===
 
         qa_result = None
@@ -728,7 +794,25 @@ class TCMFusionPipeline:
                 
                 try:
                     diseases = self.qa_pipeline.neo4j_client.get_diseases_by_syndrome(syndrome)
-                    treatment = self.qa_pipeline.neo4j_client.get_treatment_by_syndrome(syndrome)
+                    
+                    # Tìm bệnh lý phù hợp nhất trong số các bệnh lý của hội chứng này từ combined_query
+                    target_disease = None
+                    if diseases:
+                        for d in diseases:
+                            if d.lower() in combined_query.lower():
+                                target_disease = d
+                                break
+                        if not target_disease:
+                            for d in diseases:
+                                d_clean = d.lower().replace("bệnh", "").strip()
+                                if d_clean and d_clean in combined_query.lower():
+                                    target_disease = d
+                                    break
+                    
+                    treatment = self.qa_pipeline.neo4j_client.get_treatment_by_syndrome(syndrome, target_disease)
+                    if not treatment and target_disease:
+                        # Fallback nếu không có bài thuốc đặc hiệu cho bệnh lý đó
+                        treatment = self.qa_pipeline.neo4j_client.get_treatment_by_syndrome(syndrome)
                     
                     bai_thuoc = "Chưa có dữ liệu"
                     vi_thuoc = "Chưa có dữ liệu"

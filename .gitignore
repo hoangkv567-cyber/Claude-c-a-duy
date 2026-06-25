@@ -41,3 +41,6 @@ temp_uploads/
 *.jpg
 *.png
 *.jpeg
+
+.vercel
+.env*

@@ -34,16 +34,11 @@ async def diagnose(
     face_img: UploadFile = File(None), 
     tongue_img: UploadFile = File(None)
 ):
-    # Kiểm tra bắt buộc nhập triệu chứng và tải lên ít nhất một hình ảnh
-    if not symptoms.strip():
+    # Kiểm tra bắt buộc: Phải cung cấp ít nhất triệu chứng bằng văn bản HOẶC tải lên ít nhất một hình ảnh
+    if not symptoms.strip() and not face_img and not tongue_img:
         raise HTTPException(
             status_code=400, 
-            detail="Bắt buộc phải cung cấp triệu chứng lâm sàng bằng văn bản."
-        )
-    if not face_img and not tongue_img:
-        raise HTTPException(
-            status_code=400, 
-            detail="Bắt buộc phải tải lên ít nhất một hình ảnh (ảnh sắc mặt hoặc ảnh lưỡi)."
+            detail="Bắt buộc phải cung cấp triệu chứng lâm sàng bằng văn bản hoặc tải lên ít nhất một hình ảnh (ảnh sắc mặt hoặc ảnh lưỡi)."
         )
 
     import uuid

@@ -20,10 +20,10 @@ FACE_PROMPT_TEMPLATE = """
 Act as a Traditional Chinese Medicine expert with 20 years of experience in face diagnosis (Vọng chẩn - nhìn sắc mặt).
 Analyze this face image carefully and write a concise, professional description of the patient's facial features in English.
 
-Please describe:
+Please describe ONLY physical and anatomical characteristics:
 1. Complexion / Facial color (e.g., pale, sallow, flushed red, dull/dark, yellow, green...).
-2. Spirit / Expression / Shen (e.g., fatigue, lack of spirit, dull eyes, alert/normal...).
-3. Other facial features or abnormalities (e.g., puffiness/swelling, dark circles under eyes, spots, rashes, moles...).
+2. Other facial features or abnormalities (e.g., puffiness/swelling, dark circles under eyes, spots, rashes, moles...).
 
+Do NOT describe the patient's expression, mood, spirit, or signs of subjective state (e.g., do NOT mention fatigue, stress, overwork, neutral expression, tiredness, or being alert/normal).
 Write a concise description in English (1-2 sentences). Do not use JSON or lists. Just write the description directly.
 """

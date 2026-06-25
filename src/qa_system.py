@@ -17,12 +17,134 @@ class TCMQA:
         self.seed = self.config.get("qa", {}).get("seed", 42)
         self.top_p = self.config.get("qa", {}).get("top_p", 0.9)
 
-        # Cấu hình sử dụng Hugging Face Cloud hoặc Ollama
+        # Cấu hình sử dụng SiliconFlow, OpenRouter, Hugging Face Cloud hoặc Ollama
+        siliconflow_cfg = self.config.get("siliconflow", {})
+        openrouter_cfg = self.config.get("openrouter", {})
         hf_cfg = self.config.get("huggingface", {})
-        if hf_cfg.get("use_cloud", False):
+        import os
+        
+        if siliconflow_cfg.get("use_cloud", False):
+            token = os.environ.get("SILICONFLOW_API_KEY") or siliconflow_cfg.get("api_key")
+            model_id = siliconflow_cfg.get("model", "Qwen/Qwen2.5-72B-Instruct")
+            self.llm_model = model_id
+            
+            class SiliconFlowChatClient:
+                def __init__(self, token_val: str, model_val: str, proxy: str = None):
+                    self.token = token_val
+                    self.model_id = model_val
+                    self.url = "https://api.siliconflow.com/v1/chat/completions"
+                    import httpx
+                    headers = {
+                        "Authorization": f"Bearer {self.token}",
+                        "Content-Type": "application/json"
+                    }
+                    if proxy:
+                        self.http_client = httpx.Client(proxies=proxy, headers=headers, timeout=120.0)
+                        logger.info(f"Khởi tạo SiliconFlow Client cho model {model_val} qua proxy: {proxy}")
+                    else:
+                        self.http_client = httpx.Client(headers=headers, timeout=120.0)
+                        logger.info(f"Khởi tạo SiliconFlow Client cho model: {model_val}")
+
+                def chat(self, model: str, messages: list, options: dict = None) -> dict:
+                    temperature = 0.0
+                    if options:
+                        if "temperature" in options:
+                            temperature = options["temperature"]
+                        if temperature == 0.0:
+                            temperature = 0.01
+                    payload = {
+                        "model": self.model_id,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "stream": False
+                    }
+                    if options and "max_tokens" in options:
+                        payload["max_tokens"] = options["max_tokens"]
+                    try:
+                        response = self.http_client.post(self.url, json=payload)
+                        response.raise_for_status()
+                        data = response.json()
+                        content = data["choices"][0]["message"]["content"]
+                        return {
+                            "message": {
+                                "role": "assistant",
+                                "content": content
+                            }
+                        }
+                    except Exception as e:
+                        logger.error(f"Lỗi gọi SiliconFlow API: {e}")
+                        if 'response' in locals() and response is not None:
+                            logger.error(f"Chi tiết phản hồi lỗi: {response.text}")
+                        raise e
+
+            proxy = siliconflow_cfg.get("proxy")
+            self.client = SiliconFlowChatClient(token, model_id, proxy)
+            logger.info("TCMQA kết nối SiliconFlow thành công!")
+            
+        elif openrouter_cfg.get("use_cloud", False):
+            token = os.environ.get("OPENROUTER_API_KEY") or openrouter_cfg.get("api_key")
+            model_id = openrouter_cfg.get("model", "qwen/qwen-2.5-vl-72b-instruct:free")
+            self.llm_model = model_id
+            
+            class OpenRouterChatClient:
+                def __init__(self, token_val: str, model_val: str, proxy: str = None):
+                    self.token = token_val
+                    self.model_id = model_val
+                    self.url = "https://openrouter.ai/api/v1/chat/completions"
+                    import httpx
+                    headers = {
+                        "Authorization": f"Bearer {self.token}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "http://localhost:3000",
+                        "X-Title": "TCM-Qwen-QA"
+                    }
+                    if proxy:
+                        self.http_client = httpx.Client(proxies=proxy, headers=headers, timeout=60.0)
+                        logger.info(f"Khởi tạo OpenRouter Client cho model {model_val} qua proxy: {proxy}")
+                    else:
+                        self.http_client = httpx.Client(headers=headers, timeout=60.0)
+                        logger.info(f"Khởi tạo OpenRouter Client cho model: {model_val}")
+
+                def chat(self, model: str, messages: list, options: dict = None) -> dict:
+                    temperature = 0.0
+                    if options:
+                        if "temperature" in options:
+                            temperature = options["temperature"]
+                        if temperature == 0.0:
+                            temperature = 0.01
+                    payload = {
+                        "model": self.model_id,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "stream": False
+                    }
+                    if options and "max_tokens" in options:
+                        payload["max_tokens"] = options["max_tokens"]
+                    try:
+                        response = self.http_client.post(self.url, json=payload)
+                        response.raise_for_status()
+                        data = response.json()
+                        content = data["choices"][0]["message"]["content"]
+                        return {
+                            "message": {
+                                "role": "assistant",
+                                "content": content
+                            }
+                        }
+                    except Exception as e:
+                        logger.error(f"Lỗi gọi OpenRouter API: {e}")
+                        if 'response' in locals() and response is not None:
+                            logger.error(f"Chi tiết phản hồi lỗi: {response.text}")
+                        raise e
+
+            proxy = openrouter_cfg.get("proxy")
+            self.client = OpenRouterChatClient(token, model_id, proxy)
+            logger.info("TCMQA kết nối OpenRouter thành công!")
+            
+        elif hf_cfg.get("use_cloud", False):
             # Khởi tạo client Hugging Face Serverless
-            token = hf_cfg.get("token")
-            model_id = hf_cfg.get("model", "Qwen/Qwen2.5-7B-Instruct")
+            token = os.environ.get("HF_TOKEN") or hf_cfg.get("token")
+            model_id = hf_cfg.get("model", "Qwen/Qwen2.5-72B-Instruct")
             self.llm_model = model_id
             
             class HuggingFaceChatClient:
@@ -105,7 +227,7 @@ class TCMQA:
 
         # Danh sách nhãn và quan hệ để LLM biết
         self.node_labels = ["BenhLy", "HoiChung", "TrieuChung", "BaiThuoc", "ViThuoc"]
-        self.rel_types = ["CHIA_THÀNH", "CÓ_BIỂU_HIỆN", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG", "BAO_GÔM"]
+        self.rel_types = ["CHIA_THÀNH", "CÓ_BIỂU_HIỆN", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG", "BAO_GỒM"]
 
     def close(self):
         self.driver.close()
@@ -170,24 +292,27 @@ class TCMQA:
         1. USE THE PROVIDED SYMPTOMS ONLY: Generate the Cypher query using exactly the following medical symptoms extracted from the user's question: {symptoms_str}.
            Do NOT extract, change, or add any other symptoms.
         
-        2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs. You MUST use Regex word boundaries `\\\\b`.
-           Syntax: WHERE toLower(t.name) =~ '.*\\\\bkeyword\\\\b.*' (keyword must be in lowercase, e.g., 'ho khan' instead of 'Ho khan')
-           Example: For symptom 'ho liên tục', use: WHERE toLower(t.name) =~ '.*\\\\bho liên tục\\\\b.*'
+        2. EXACT WORD MATCHING (CRITICAL): NEVER use CONTAINS to prevent substring bugs. You MUST use Unicode-aware word boundaries `(^|[^\\p{{L}}])keyword($|[^\\p{{L}}])`.
+            Syntax: WHERE toLower(t.name) =~ '.*(^|[^\\p{{L}}])keyword($|[^\\p{{L}}]).*' (keyword must be in lowercase, e.g., 'ho' instead of 'Ho')
+            Example: For symptom 'ho liên tục', use: WHERE toLower(t.name) =~ '.*(^|[^\\p{{L}}])ho liên tục($|[^\\p{{L}}]).*'
+         
+                  3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS):
+            MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)-[r:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
+            WHERE toLower(t.name) =~ '.*(^|[^\\p{{L}}])keyword1($|[^\\p{{L}}]).*'
+              AND r.benh_ly = b.name
+            OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+            WHERE p.benh_ly = b.name AND p.hoi_chung = h.name
+            RETURN DISTINCT b.name, h.name, p.name
+         
+                  4. FOR MULTIPLE SYMPTOMS: Use multiple MATCH clauses.
+            Example for symptoms 'ho khan' and 'đau đầu':
+            MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h:HoiChung)
+            MATCH (h)-[r1:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*(^|[^\\p{{L}}])ho khan($|[^\\p{{L}}]).*' AND r1.benh_ly = b.name
+            MATCH (h)-[r2:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*(^|[^\\p{{L}}])đau đầu($|[^\\p{{L}}]).*' AND r2.benh_ly = b.name
+            OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+            WHERE p.benh_ly = b.name AND p.hoi_chung = h.name
+            RETURN DISTINCT b.name, h.name, p.name
         
-        3. MANDATORY RETURN STRUCTURE (NO EXCEPTIONS):
-           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t:TrieuChung)
-           WHERE toLower(t.name) =~ '.*\\\\bkeyword1\\\\b.*'
-           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
-           OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
-           RETURN DISTINCT b.name, h.name, p.name
-        
-        4. FOR MULTIPLE SYMPTOMS: Use multiple MATCH clauses.
-           Example for symptoms 'ho khan' and 'đau đầu':
-           MATCH (h:HoiChung)-[:CÓ_BIỂU_HIỆN]->(t1:TrieuChung) WHERE toLower(t1.name) =~ '.*\\\\bho khan\\\\b.*'
-           MATCH (h)-[:CÓ_BIỂU_HIỆN]->(t2:TrieuChung) WHERE toLower(t2.name) =~ '.*\\\\bđau đầu\\\\b.*'
-           OPTIONAL MATCH (b:BenhLy)-[:CHIA_THÀNH]->(h)
-           OPTIONAL MATCH (h)-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
-           RETURN DISTINCT b.name, h.name, p.name
 
         5. Output ONLY a SINGLE raw Cypher query. Do NOT use markdown code blocks (like ```cypher). No explanations.
         
@@ -210,6 +335,18 @@ class TCMQA:
             cypher = response['message']['content'].strip()
             # Dọn dẹp ký tự markdown nếu LLM lỡ sinh ra
             cypher = cypher.replace("```cypher", "").replace("```", "").strip()
+            
+            # Sửa các lỗi chính tả/dấu cách trong tên mối quan hệ do LLM sinh ra
+            cypher = cypher.replace("CÓ BIỂU HIỆN", "CÓ_BIỂU_HIỆN")
+            cypher = cypher.replace("CÓ_BIỂU HIỆN", "CÓ_BIỂU_HIỆN")
+            cypher = cypher.replace("CÓ BIỂU_HIỆN", "CÓ_BIỂU_HIỆN")
+            cypher = cypher.replace("CHIA THÀNH", "CHIA_THÀNH")
+            cypher = cypher.replace("ĐƯỢC ĐIỀU TRỊ BẰNG", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG")
+            cypher = cypher.replace("ĐƯỢC_ĐIỀU_TRỊ BẰNG", "ĐƯỢC_ĐIỀU_TRỊ_BẰNG")
+            cypher = cypher.replace("BAO GỒM", "BAO_GỒM")
+            cypher = cypher.replace("BAO GÔM", "BAO_GỒM")
+            cypher = cypher.replace("BAO_GÔM", "BAO_GỒM")
+            
             return cypher
         except Exception as e:
             logger.error(f"Lỗi sinh Cypher: {e}")

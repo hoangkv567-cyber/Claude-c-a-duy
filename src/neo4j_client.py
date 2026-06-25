@@ -12,20 +12,34 @@ class Neo4jTCMClient:
         self.driver.close()
         logger.info("Đã đóng kết nối Neo4j")
 
-    def get_treatment_by_syndrome(self, syndrome_name: str) -> dict:
-        """Lấy bài thuốc và vị thuốc theo hội chứng"""
+    def get_treatment_by_syndrome(self, syndrome_name: str, disease_name: str = None) -> dict:
+        """Lấy bài thuốc và vị thuốc theo hội chứng (và bệnh lý nếu có)"""
         with self.driver.session() as session:
-            result = session.run(
-                """
-                MATCH (s:HoiChung {name: $name})-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
-                OPTIONAL MATCH (p)-[:BAO_GÔM]->(v:ViThuoc)
-                RETURN s.name AS hoi_chung, 
-                       p.name AS bai_thuoc, 
-                       COLLECT(DISTINCT v.name) AS vi_thuoc
-                LIMIT 1
-                """,
-                name=syndrome_name
-            )
+            if disease_name:
+                result = session.run(
+                    """
+                    MATCH (s:HoiChung {name: $name})-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc {benh_ly: $disease_name, hoi_chung: $name})
+                    OPTIONAL MATCH (p)-[:BAO_GỒM]->(v:ViThuoc)
+                    RETURN s.name AS hoi_chung, 
+                           p.name AS bai_thuoc, 
+                           COLLECT(DISTINCT v.name) AS vi_thuoc
+                    LIMIT 1
+                    """,
+                    name=syndrome_name,
+                    disease_name=disease_name
+                )
+            else:
+                result = session.run(
+                    """
+                    MATCH (s:HoiChung {name: $name})-[:ĐƯỢC_ĐIỀU_TRỊ_BẰNG]->(p:BaiThuoc)
+                    OPTIONAL MATCH (p)-[:BAO_GỒM]->(v:ViThuoc)
+                    RETURN s.name AS hoi_chung, 
+                           p.name AS bai_thuoc, 
+                           COLLECT(DISTINCT v.name) AS vi_thuoc
+                    LIMIT 1
+                    """,
+                    name=syndrome_name
+                )
             record = result.single()
             if record:
                 return {
@@ -34,6 +48,7 @@ class Neo4jTCMClient:
                     "vi_thuoc": record["vi_thuoc"]
                 }
             return None
+
 
     def get_all_syndromes(self) -> list:
         """Lấy danh sách tất cả hội chứng"""
