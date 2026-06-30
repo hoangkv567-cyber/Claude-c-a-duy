@@ -1,0 +1,4 @@
+Line 489: if len(disease.split()) < 2 and disease.lower() not in ["ho", "lao"]:
+Line 740: if any(k in cq_lower for k in ["ho", "ngạt mũi", "mũi", "phế", "phổi"]):
+Line 1031: any(x in symptoms_lower for x in ["sổ mũi", "chảy nước mũi", "ngạt mũi", "hắt hơi", "ho"]) and
+Line 1104: "ho" in symptoms_lower and

@@ -1,0 +1,30 @@
+# config/config.yaml
+
+neo4j:
+  uri: "neo4j+s://c55f875f.databases.neo4j.io"  # URI mới từ Aura
+  user: "c55f875f"                                # Username (thường là neo4j)
+  password: "Z7b-auwCd7T1KPY8TF0p3_piWcAyfospK55nC196c7w"                # Mật khẩu bạn đã lưu
+
+qa:
+  llm_model: "qwen2.5:7b"
+  temperature: 0.0
+  seed: 42
+  top_p: 0.9
+
+huggingface:
+  use_cloud: false
+  token: "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"
+  model: "Qwen/Qwen2.5-7B-Instruct"
+
+openrouter:
+  use_cloud: false
+  api_key: "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"
+  model: "google/gemma-2-9b-it:free"
+
+siliconflow:
+  use_cloud: true
+  api_key: "sk-vsogagrheineptqaoahtzuhvcnnjtixaryuycbxtykuqvukx"
+  model: "Qwen/Qwen2.5-72B-Instruct"
+
+logging:
+  level: "INFO"

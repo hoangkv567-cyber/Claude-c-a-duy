@@ -1,0 +1,10 @@
+ollama
+neo4j
+fastapi
+uvicorn
+python-multipart
+pillow
+requests
+pydantic
+pyyaml
+pandas

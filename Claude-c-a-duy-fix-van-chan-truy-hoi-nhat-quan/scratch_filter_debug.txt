@@ -1,0 +1,10 @@
+RAW ANSWER:
+Giai đoạn mới phát (Phong nhiệt phạm phế), Phong nhiệt (phát ở đầu mặt)
+
+SELECTED: ['Giai đoạn mới phát (Phong nhiệt phạm phế)', 'Phong nhiệt (phát ở đầu mặt)']
+CLEANED SELECTED: ['Giai đoạn mới phát (Phong nhiệt phạm phế)', 'Phong nhiệt (phát ở đầu mặt)']
+MATCHED DETAILS:
+Khớp chính xác: Giai đoạn mới phát (Phong nhiệt phạm phế) (từ Giai đoạn mới phát (Phong nhiệt phạm phế))
+Khớp chính xác: Phong nhiệt (phát ở đầu mặt) (từ Phong nhiệt (phát ở đầu mặt))
+
+VALID SELECTED: ['Giai đoạn mới phát (Phong nhiệt phạm phế)', 'Phong nhiệt (phát ở đầu mặt)']
