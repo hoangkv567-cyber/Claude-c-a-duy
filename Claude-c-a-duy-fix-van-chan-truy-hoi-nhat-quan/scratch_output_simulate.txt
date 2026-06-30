@@ -1,0 +1,20 @@
+STATUS: pending_questions
+QUESTIONS: [{'question': 'Anh/chị có thường xuyên bị đau mỏi lưng gối không?', 'options': [{'label': 'Có, tôi bị đau mỏi lưng gối thường xuyên', 'value': 'đau mỏi lưng gối'}, {'label': 'Không bị đau mỏi lưng gối', 'value': ''}]}, {'question': 'Anh/chị có bị ra mồ hôi trộm vào ban đêm không?', 'options': [{'label': 'Có, tôi thường bị ra mồ hôi trộm vào ban đêm', 'value': 'ra mồ hôi trộm'}, {'label': 'Không bị ra mồ hôi trộm', 'value': ''}]}]
+MARKDOWN ANSWER:
+### 1. Tổng quan chẩn đoán
+- **Bệnh danh:** Chưa xác định cụ thể
+- **Hội chứng cốt lõi:** Âm Dương Lưỡng Hư
+- **Hội chứng kèm theo (nếu có):** Không có
+
+### 2. Định vị Bát Cương
+- **Thuộc chứng:** Lý - Hàn Nhiệt Thác Tạp - Hư
+
+### 3. Phân tích Cơ chế Gốc (Bản Hư)
+Hội chứng cốt lõi là Âm Dương Lưỡng Hư, trong đó cả Âm và Dương đều suy yếu. Dương khí hư suy dẫn đến Thanh dương bất thăng, khiến khí trong trẻo không đủ sức thăng lên thượng tiêu, não bộ mất đi sự nuôi dưỡng, từ đó sinh ra các triệu chứng như chóng mặt, hoa mắt. Đồng thời, Dương hư cũng làm giảm khả năng vận hóa của Tỳ, dẫn đến khí huyết suy yếu, gây mệt mỏi và sắc mặt nhợt. Âm hư sinh nội nhiệt, làm mạch sác, tức mạch nhanh và nhỏ, phản ánh tình trạng âm huyết không đủ để làm đầy mạch. Sợ lạnh là do Dương khí hư suy, không đủ sức để giữ ấm cơ thể. Đau lưng là do Thận dương hư suy, không đủ sức để nuôi dưỡng cốt tủy, làm cho lưng mất đi sự hỗ trợ và nuôi dưỡng cần thiết. Ngoài ra, Mạch Tế là Huyết hư (âm phần bất túc), mạch Sác là nội nhiệt (âm hư sinh hỏa) — phản ánh trạng thái Âm hư sinh nội nhiệt. Khí huyết kém lưu thông do hư tổn, âm hàn ngưng trệ kinh mạch vùng đầu cổ gây ra đau đầu.
+
+### 4. Phân tích Cơ chế Ngọn (Tiêu Thực / Triệu chứng cấp)
+Không có Tiêu Thực, đây là bệnh lý Hư chứng thuần túy.
+
+### 5. Pháp trị & Đề xuất Bài thuốc
+- Hệ thống hiện tại chưa cập nhật bài thuốc đặc trị khớp hoàn toàn với tổ hợp triệu chứng và mạch lý này.
+- Khuyến nghị: Người bệnh nên tham khảo ý kiến của bác sĩ Đông y để được biện chứng luận trị sâu hơn.

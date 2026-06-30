@@ -1,0 +1,26 @@
+SOURCE: Tứ chẩn hợp tham (Fusion)
+DIAGNOSIS RESULT ANSWER SUMMARY:
+### 1. Tổng quan chẩn đoán
+- **Bệnh danh:** Chưa xác định cụ thể
+- **Hội chứng cốt lõi:** Can Thận âm hư
+- **Hội chứng kèm theo (nếu có):** Can dương thượng cang
+
+### 2. Định vị Bát Cương
+- **Thuộc chứng:** Lý - Hư/Thực
+
+### 3. Phân tích Cơ chế Gốc (Bản Hư)
+- Thận âm hư: Thận âm suy yếu dẫn đến mất cân bằng âm dương, gây ra các triệu chứng nền như ù tai, chóng mặt. Thận âm hư cũng ảnh hưởng đến chức năng của Can, làm Can mất mát dưỡng chất, dẫn đến Can âm hư.
+
+### 4. Phân tích Cơ chế Ngọn (Tiêu Thực / Triệu chứng cấp)
+- Can dương thượng cang: Can dương tăng cường, tấn công lên đầu và ngực, gây ra các biểu hiện cấp tính như đau đầu, tức ngực. Can dương thượng cang cũng làm rối loạn chức năng của Thận, làm Thận âm càng suy yếu, tạo thành một vòng luẩn quẩn.
+
+### 5. Pháp trị & Đề xuất Bài thuốc
+- Triệu chứng quá chung chung, ứng với nhiều bệnh lý khác nhau.
+- Vui lòng bổ sung thêm triệu chứng chi tiết (ví dụ: tính chất cơn đau, rêu lưỡi, mạch) để xác định bài thuốc chính xác.
+
+
+--- GRAPH DATA (detailed_kg_data) ---
+Number of syndromes returned: 3
+Syndrome: Can Thận âm hư -> Number of treatments in graph payload: 0
+Syndrome: Can dương thượng cang -> Number of treatments in graph payload: 0
+Syndrome: Đờm trở huyết ứ (xơ cứng động mạch não) -> Number of treatments in graph payload: 0

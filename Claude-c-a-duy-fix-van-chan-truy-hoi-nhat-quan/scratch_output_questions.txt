@@ -1,0 +1,8 @@
+SOURCE: Tứ chẩn hợp tham (Fusion)
+STATUS: pending_questions
+QUESTIONS GENERATED:
+Total questions: 2
+1. Question: Quý vị có thường xuyên cảm thấy khô miệng, khát nước không?
+   Options: ['Có', 'Không']
+2. Question: Quý vị có gặp phải tình trạng đau lưng, đặc biệt là vùng thắt lưng không?
+   Options: ['Có', 'Không']
